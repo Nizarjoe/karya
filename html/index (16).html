@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Clone - Event Organizer</title>
+    <style>
+        :root {
+            --bg-primary: #0E1015;
+            --bg-secondary: #1C1F26;
+            --bg-sidebar: #15171E;
+            --bg-card: rgba(30, 33, 40, 0.6);
+            --accent: #7C3AED;
+            --accent-light: #8B5CF6;
+            --text-primary: #E2E8F0;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --border: rgba(255, 255, 255, 0.08);
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s ease-in-out;
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        .light-theme {
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #F1F5F9;
+            --bg-sidebar: #E2E8F0;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #64748B;
+            --border: rgba(0, 0, 0, 0.08);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: var(--transition);
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            position: relative;
+            z-index: 10;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            transition: var(--transition);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.7);
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .sidebar.collapsed .logo-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .toggle-sidebar {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .toggle-sidebar:hover {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+        }
+
+        .search-container {
+            padding: 16px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .pages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .pages-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+        }
+
+        .pages-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .add-page-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .add-page-btn:hover {
+            color: var(--text-primary);
+            background: var(--glass-bg);
+        }
+
+        .page-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+
+        .page-item:hover {
+            background: var(--glass-bg);
+        }
+
+        .page-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .page-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .page-title {
+            flex: 1;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar.collapsed .page-title {
+            display: none;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .page-item:hover .page-actions {
+            opacity: 1;
+        }
+
+        .page-action-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 2px;
+            font-size: 12px;
+            transition: var(--transition);
+        }
+
+        .page-action-btn:hover {
+            color: var(--text-primary);
+            background: var(--glass-bg);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .top-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-sidebar);
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--glass-bg);
+            border-radius: var(--radius);
+            padding: 4px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .view-btn {
+            padding: 6px 12px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .view-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        .toolbar-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .ai-btn {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+        }
+
+        .ai-btn:hover {
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Editor */
+        .editor-container {
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title-input {
+            width: 100%;
+            background: none;
+            border: none;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            padding: 8px 0;
+            margin-bottom: 8px;
+            transition: var(--transition);
+        }
+
+        .page-title-input:focus {
+            outline: none;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-icon-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .icon-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--glass-bg);
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .icon-option:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .icon-option.selected {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent-light);
+        }
+
+        .blocks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .block {
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .block:hover {
+            background: var(--glass-bg);
+        }
+
+        .block.focused {
+            background: var(--bg-card);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .block-content {
+            min-height: 24px;
+            outline: none;
+            padding: 2px 0;
+        }
+
+        .block-content:empty:before {
+            content: attr(data-placeholder);
+            color: var(--text-muted);
+        }
+
+        .block-actions {
+            position: absolute;
+            left: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .block:hover .block-actions {
+            opacity: 1;
+        }
+
+        .block-action-btn {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 12px;
+        }
+
+        .block-action-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .block-type-heading1 .block-content {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .block-type-heading2 .block-content {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .block-type-heading3 .block-content {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .block-type-quote .block-content {
+            border-left: 3px solid var(--accent);
+            padding-left: 16px;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .block-type-todo {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .todo-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 3px;
+            transition: var(--transition);
+        }
+
+        .todo-checkbox.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .block-type-code .block-content {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .block-type-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 16px 0;
+        }
+
+        .block-type-image {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .image-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .image-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .add-block-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--glass-bg);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 8px;
+            opacity: 0;
+        }
+
+        .blocks-container:hover .add-block-btn {
+            opacity: 1;
+        }
+
+        .add-block-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-style: solid;
+        }
+
+        /* Block Menu */
+        .block-menu {
+            position: fixed;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 100;
+            width: 240px;
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.2s ease-out;
+        }
+
+        .block-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .block-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .block-menu-item:hover {
+            background: var(--glass-bg);
+        }
+
+        .block-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+        }
+
+        .block-menu-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .block-menu-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Calendar */
+        .calendar-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .calendar-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .calendar-day-header {
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+        }
+
+        .calendar-day {
+            min-height: 120px;
+            background: var(--bg-card);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background: var(--glass-bg);
+        }
+
+        .calendar-day.other-month {
+            color: var(--text-muted);
+            background: var(--bg-sidebar);
+        }
+
+        .calendar-day.today {
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        .day-number {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .calendar-event {
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-left: 3px solid;
+        }
+
+        .calendar-event:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .add-event-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .calendar-day:hover .add-event-btn {
+            opacity: 1;
+        }
+
+        /* AI Assistant */
+        .ai-assistant {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .ai-toggle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+            transition: var(--transition);
+            border: none;
+        }
+
+        .ai-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(124, 58, 237, 0.6);
+        }
+
+        .ai-panel {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 360px;
+            height: 500px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        .ai-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ai-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .ai-close:hover {
+            color: var(--text-primary);
+            background: var(--glass-bg);
+        }
+
+        .ai-conversation {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ai-message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .ai-message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message.assistant {
+            align-self: flex-start;
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-input-container {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .ai-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .ai-quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .ai-quick-action {
+            padding: 8px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .ai-quick-action:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            width: 480px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: scaleIn 0.2s ease-out;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+            background: var(--glass-bg);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-sidebar);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from { 
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+
+        .glass {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-4 {
+            margin-top: 16px;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                height: 100%;
+                z-index: 100;
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .sidebar.collapsed {
+                width: 280px;
+            }
+            
+            .ai-panel {
+                width: 100vw;
+                height: 100vh;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo">N</div>
+                    <div class="logo-text">Notion EO</div>
+                </div>
+                <button class="toggle-sidebar">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M14 5H2V3h12v2zm0 4H2V7h12v2zM2 13h12v-2H2v2z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="search-container">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                </svg>
+                <input type="text" class="search-input" placeholder="Cari halaman...">
+            </div>
+            <div class="pages-container">
+                <div class="pages-header">
+                    <div class="pages-title">Halaman</div>
+                    <button class="add-page-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2H9v6a1 1 0 1 1-2 0V9H1a1 1 0 0 1 0-2h6V1a1 1 0 0 1 1-1z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="pages-list">
+                    <!-- Pages will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-toolbar">
+                <div class="toolbar-left">
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="editor">Editor</button>
+                        <button class="view-btn" data-view="calendar">Kalender</button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button class="toolbar-btn" id="export-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M11.5 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4.5L11.5 0zM2 1a1 1 0 0 1 1-1h7.5v3H2V1zm12 14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5h12v10z"/>
+                            <path d="M4.5 7.5a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm0 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7zm0 2a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4z"/>
+                        </svg>
+                        Export
+                    </button>
+                    <button class="toolbar-btn ai-btn" id="ai-assistant-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM4.5 7.5a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7z"/>
+                        </svg>
+                        AI Assistant
+                    </button>
+                </div>
+            </div>
+            <div class="content-area">
+                <!-- Editor View -->
+                <div class="editor-container view-content" id="editor-view">
+                    <div class="page-header">
+                        <div class="page-icon-selector">
+                            <div class="icon-option selected">📅</div>
+                            <div class="icon-option">🎵</div>
+                            <div class="icon-option">🎤</div>
+                            <div class="icon-option">📋</div>
+                            <div class="icon-option">💡</div>
+                        </div>
+                        <input type="text" class="page-title-input" placeholder="Judul Halaman...">
+                    </div>
+                    <div class="blocks-container">
+                        <!-- Blocks will be dynamically added here -->
+                    </div>
+                    <button class="add-block-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2H9v6a1 1 0 1 1-2 0V9H1a1 1 0 0 1 0-2h6V1a1 1 0 0 1 1-1z"/>
+                        </svg>
+                        Tambah blok
+                    </button>
+                </div>
+
+                <!-- Calendar View -->
+                <div class="calendar-container view-content hidden" id="calendar-view">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button class="toolbar-btn" id="prev-month">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                                </svg>
+                            </button>
+                            <div class="calendar-title">Oktober 2025</div>
+                            <button class="toolbar-btn" id="next-month">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="toolbar-btn" id="add-event-btn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 0a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2H9v6a1 1 0 1 1-2 0V9H1a1 1 0 0 1 0-2h6V1a1 1 0 0 1 1-1z"/>
+                            </svg>
+                            Event Baru
+                        </button>
+                    </div>
+                    <div class="calendar-grid">
+                        <!-- Calendar days will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="ai-assistant">
+            <button class="ai-toggle">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2v-2zm2-10h-2v8h2V7z"/>
+                </svg>
+            </button>
+            <div class="ai-panel hidden">
+                <div class="ai-header">
+                    <div class="ai-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2v-2zm2-10h-2v8h2V7z"/>
+                        </svg>
+                        AI Assistant
+                    </div>
+                    <button class="ai-close">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="ai-conversation">
+                    <div class="ai-message assistant">
+                        Halo! Saya AI Assistant untuk Event Organizer. Saya bisa membantu Anda merencanakan acara, membuat rundown, menulis deskripsi, dan banyak lagi. Apa yang bisa saya bantu?
+                    </div>
+                </div>
+                <div class="ai-input-container">
+                    <input type="text" class="ai-input" placeholder="Tanyakan sesuatu tentang event Anda...">
+                    <div class="ai-quick-actions">
+                        <div class="ai-quick-action">Buat rundown acara</div>
+                        <div class="ai-quick-action">Tulis deskripsi event</div>
+                        <div class="ai-quick-action">Saran nama event</div>
+                        <div class="ai-quick-action">Checklist persiapan</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div class="modal-overlay hidden" id="event-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Tambah Event Baru</div>
+                <button class="modal-close">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Judul Event</label>
+                    <input type="text" class="form-input" id="event-title" placeholder="Nama event...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tanggal</label>
+                    <input type="date" class="form-input" id="event-date">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Waktu</label>
+                    <input type="time" class="form-input" id="event-time">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Deskripsi</label>
+                    <textarea class="form-textarea" id="event-description" placeholder="Deskripsi event..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Warna</label>
+                    <div class="color-options" style="display: flex; gap: 8px;">
+                        <div class="color-option" data-color="#7C3AED" style="width: 24px; height: 24px; border-radius: 50%; background: #7C3AED; cursor: pointer;"></div>
+                        <div class="color-option" data-color="#10B981" style="width: 24px; height: 24px; border-radius: 50%; background: #10B981; cursor: pointer;"></div>
+                        <div class="color-option" data-color="#F59E0B" style="width: 24px; height: 24px; border-radius: 50%; background: #F59E0B; cursor: pointer;"></div>
+                        <div class="color-option" data-color="#EF4444" style="width: 24px; height: 24px; border-radius: 50%; background: #EF4444; cursor: pointer;"></div>
+                        <div class="color-option" data-color="#3B82F6" style="width: 24px; height: 24px; border-radius: 50%; background: #3B82F6; cursor: pointer;"></div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" id="cancel-event">Batal</button>
+                    <button class="btn btn-primary" id="save-event">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Block Menu -->
+    <div class="block-menu hidden">
+        <div class="block-menu-item" data-type="paragraph">
+            <div class="block-icon">📝</div>
+            <div>
+                <div class="block-menu-title">Teks</div>
+                <div class="block-menu-desc">Mulai menulis dengan teks biasa</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="heading1">
+            <div class="block-icon">🔤</div>
+            <div>
+                <div class="block-menu-title">Heading 1</div>
+                <div class="block-menu-desc">Heading bagian besar</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="heading2">
+            <div class="block-icon">🔡</div>
+            <div>
+                <div class="block-menu-title">Heading 2</div>
+                <div class="block-menu-desc">Heading bagian sedang</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="heading3">
+            <div class="block-icon">🔠</div>
+            <div>
+                <div class="block-menu-title">Heading 3</div>
+                <div class="block-menu-desc">Heading bagian kecil</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="quote">
+            <div class="block-icon">💬</div>
+            <div>
+                <div class="block-menu-title">Kutipan</div>
+                <div class="block-menu-desc">Tampilkan kutipan</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="todo">
+            <div class="block-icon">✅</div>
+            <div>
+                <div class="block-menu-title">To-do</div>
+                <div class="block-menu-desc">Daftar tugas yang dapat dicentang</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="list">
+            <div class="block-icon">•</div>
+            <div>
+                <div class="block-menu-title">Daftar Bullet</div>
+                <div class="block-menu-desc">Daftar dengan bullet points</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="numbered-list">
+            <div class="block-icon">1.</div>
+            <div>
+                <div class="block-menu-title">Daftar Berangka</div>
+                <div class="block-menu-desc">Daftar dengan angka</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="code">
+            <div class="block-icon">{ }</div>
+            <div>
+                <div class="block-menu-title">Kode</div>
+                <div class="block-menu-desc">Tambahkan blok kode</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="image">
+            <div class="block-icon">🖼️</div>
+            <div>
+                <div class="block-menu-title">Gambar</div>
+                <div class="block-menu-desc">Unggah atau tempel URL gambar</div>
+            </div>
+        </div>
+        <div class="block-menu-item" data-type="divider">
+            <div class="block-icon">―</div>
+            <div>
+                <div class="block-menu-title">Pembatas</div>
+                <div class="block-menu-desc">Garis pemisah visual</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data structure
+        let appData = {
+            pages: [],
+            activePageId: null,
+            currentView: 'editor',
+            calendarDate: new Date()
+        };
+
+        // DOM Elements
+        const sidebar = document.querySelector('.sidebar');
+        const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
+        const pagesList = document.querySelector('.pages-list');
+        const addPageBtn = document.querySelector('.add-page-btn');
+        const searchInput = document.querySelector('.search-input');
+        const viewBtns = document.querySelectorAll('.view-btn');
+        const viewContents = document.querySelectorAll('.view-content');
+        const editorView = document.getElementById('editor-view');
+        const calendarView = document.getElementById('calendar-view');
+        const blocksContainer = document.querySelector('.blocks-container');
+        const addBlockBtn = document.querySelector('.add-block-btn');
+        const pageTitleInput = document.querySelector('.page-title-input');
+        const pageIconOptions = document.querySelectorAll('.icon-option');
+        const blockMenu = document.querySelector('.block-menu');
+        const aiToggle = document.querySelector('.ai-toggle');
+        const aiPanel = document.querySelector('.ai-panel');
+        const aiClose = document.querySelector('.ai-close');
+        const aiInput = document.querySelector('.ai-input');
+        const aiConversation = document.querySelector('.ai-conversation');
+        const aiQuickActions = document.querySelectorAll('.ai-quick-action');
+        const eventModal = document.getElementById('event-modal');
+        const eventTitleInput = document.getElementById('event-title');
+        const eventDateInput = document.getElementById('event-date');
+        const eventTimeInput = document.getElementById('event-time');
+        const eventDescriptionInput = document.getElementById('event-description');
+        const colorOptions = document.querySelectorAll('.color-option');
+        const saveEventBtn = document.getElementById('save-event');
+        const cancelEventBtn = document.getElementById('cancel-event');
+        const addEventBtn = document.getElementById('add-event-btn');
+        const prevMonthBtn = document.getElementById('prev-month');
+        const nextMonthBtn = document.getElementById('next-month');
+        const calendarTitle = document.querySelector('.calendar-title');
+        const calendarGrid = document.querySelector('.calendar-grid');
+        const exportBtn = document.getElementById('export-btn');
+        const aiAssistantBtn = document.getElementById('ai-assistant-btn');
+
+        // Initialize app
+        function initApp() {
+            loadData();
+            renderPages();
+            setupEventListeners();
+            
+            // Set default page if none exists
+            if (appData.pages.length === 0) {
+                createNewPage('Event Musik Oktober');
+            } else {
+                setActivePage(appData.activePageId || appData.pages[0].id);
+            }
+            
+            renderCalendar();
+        }
+
+        // Load data from localStorage
+        function loadData() {
+            const savedData = localStorage.getItem('notion-eo-data');
+            if (savedData) {
+                appData = JSON.parse(savedData);
+                
+                // Ensure calendarDate is a Date object
+                if (appData.calendarDate) {
+                    appData.calendarDate = new Date(appData.calendarDate);
+                } else {
+                    appData.calendarDate = new Date();
+                }
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('notion-eo-data', JSON.stringify(appData));
+        }
+
+        // Render pages list
+        function renderPages() {
+            pagesList.innerHTML = '';
+            
+            appData.pages.forEach(page => {
+                const pageItem = document.createElement('div');
+                pageItem.className = `page-item ${page.id === appData.activePageId ? 'active' : ''}`;
+                pageItem.innerHTML = `
+                    <div class="page-icon">${page.icon || '📄'}</div>
+                    <div class="page-title">${page.title}</div>
+                    <div class="page-actions">
+                        <button class="page-action-btn" data-action="rename">✏️</button>
+                        <button class="page-action-btn" data-action="delete">🗑️</button>
+                    </div>
+                `;
+                
+                pageItem.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('page-action-btn')) {
+                        setActivePage(page.id);
+                    }
+                });
+                
+                const renameBtn = pageItem.querySelector('[data-action="rename"]');
+                const deleteBtn = pageItem.querySelector('[data-action="delete"]');
+                
+                renameBtn.addEventListener('click', () => renamePage(page.id));
+                deleteBtn.addEventListener('click', () => deletePage(page.id));
+                
+                pagesList.appendChild(pageItem);
+            });
+        }
+
+        // Create a new page
+        function createNewPage(title = 'Halaman Baru') {
+            const pageId = 'p' + Date.now();
+            const icons = ['📅', '🎵', '🎤', '📋', '💡', '🎪', '🎭', '🎨'];
+            const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+            
+            const newPage = {
+                id: pageId,
+                title: title,
+                icon: randomIcon,
+                blocks: [
+                    { id: 'b' + Date.now(), type: 'paragraph', content: '' }
+                ],
+                events: []
+            };
+            
+            appData.pages.push(newPage);
+            setActivePage(pageId);
+            saveData();
+            renderPages();
+        }
+
+        // Set active page
+        function setActivePage(pageId) {
+            appData.activePageId = pageId;
+            appData.currentView = 'editor';
+            
+            // Update UI
+            document.querySelectorAll('.page-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            document.querySelectorAll(`.page-item`).forEach(item => {
+                if (item.querySelector('.page-title').textContent === 
+                    appData.pages.find(p => p.id === pageId)?.title) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Update view buttons
+            viewBtns.forEach(btn => {
+                if (btn.dataset.view === 'editor') {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Show editor, hide calendar
+            editorView.classList.remove('hidden');
+            calendarView.classList.add('hidden');
+            
+            // Render page content
+            renderPageContent();
+            saveData();
+        }
+
+        // Render page content
+        function renderPageContent() {
+            const activePage = appData.pages.find(p => p.id === appData.activePageId);
+            if (!activePage) return;
+            
+            // Update page title and icon
+            pageTitleInput.value = activePage.title;
+            
+            // Update selected icon
+            pageIconOptions.forEach(option => {
+                option.classList.remove('selected');
+                if (option.textContent === activePage.icon) {
+                    option.classList.add('selected');
+                }
+            });
+            
+            // Render blocks
+            blocksContainer.innerHTML = '';
+            activePage.blocks.forEach(block => {
+                const blockElement = createBlockElement(block);
+                blocksContainer.appendChild(blockElement);
+            });
+            
+            // Add the "add block" button
+            blocksContainer.appendChild(addBlockBtn);
+        }
+
+        // Create block element
+        function createBlockElement(block) {
+            const blockElement = document.createElement('div');
+            blockElement.className = `block block-type-${block.type}`;
+            blockElement.dataset.blockId = block.id;
+            
+            let blockContent = '';
+            
+            switch (block.type) {
+                case 'paragraph':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-content" contenteditable="true" data-placeholder="Ketik '/' untuk perintah">${block.content}</div>
+                    `;
+                    break;
+                    
+                case 'heading1':
+                case 'heading2':
+                case 'heading3':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-content" contenteditable="true" data-placeholder="Heading">${block.content}</div>
+                    `;
+                    break;
+                    
+                case 'quote':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-content" contenteditable="true" data-placeholder="Kutipan">${block.content}</div>
+                    `;
+                    break;
+                    
+                case 'todo':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="todo-checkbox ${block.checked ? 'checked' : ''}">${block.checked ? '✓' : ''}</div>
+                        <div class="block-content" contenteditable="true" data-placeholder="To-do">${block.content}</div>
+                    `;
+                    break;
+                    
+                case 'list':
+                case 'numbered-list':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-content" contenteditable="true" data-placeholder="Daftar">${block.content}</div>
+                    `;
+                    break;
+                    
+                case 'code':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-content" contenteditable="true" data-placeholder="Kode">${block.content}</div>
+                    `;
+                    break;
+                    
+                case 'image':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-type-image">
+                            ${block.content ? `<img src="${block.content}" class="image-preview">` : ''}
+                            <input type="text" class="image-input" placeholder="Tempel URL gambar" value="${block.content || ''}">
+                        </div>
+                    `;
+                    break;
+                    
+                case 'divider':
+                    blockContent = `
+                        <div class="block-actions">
+                            <button class="block-action-btn">⋮</button>
+                        </div>
+                        <div class="block-type-divider"></div>
+                    `;
+                    break;
+            }
+            
+            blockElement.innerHTML = blockContent;
+            
+            // Add event listeners
+            const contentEditable = blockElement.querySelector('.block-content');
+            if (contentEditable) {
+                contentEditable.addEventListener('input', () => {
+                    updateBlockContent(block.id, contentEditable.textContent);
+                });
+                
+                contentEditable.addEventListener('keydown', handleBlockKeydown);
+                contentEditable.addEventListener('focus', () => {
+                    blockElement.classList.add('focused');
+                });
+                
+                contentEditable.addEventListener('blur', () => {
+                    blockElement.classList.remove('focused');
+                });
+            }
+            
+            // Special handling for todo blocks
+            if (block.type === 'todo') {
+                const checkbox = blockElement.querySelector('.todo-checkbox');
+                checkbox.addEventListener('click', () => {
+                    toggleTodo(block.id);
+                });
+            }
+            
+            // Special handling for image blocks
+            if (block.type === 'image') {
+                const imageInput = blockElement.querySelector('.image-input');
+                imageInput.addEventListener('input', () => {
+                    updateBlockContent(block.id, imageInput.value);
+                    
+                    // Update preview if URL is valid
+                    if (imageInput.value) {
+                        const preview = blockElement.querySelector('.image-preview');
+                        if (preview) {
+                            preview.src = imageInput.value;
+                        } else {
+                            const img = document.createElement('img');
+                            img.className = 'image-preview';
+                            img.src = imageInput.value;
+                            blockElement.querySelector('.block-type-image').prepend(img);
+                        }
+                    }
+                });
+            }
+            
+            return blockElement;
+        }
+
+        // Update block content
+        function updateBlockContent(blockId, content) {
+            const activePage = appData.pages.find(p => p.id === appData.activePageId);
+            if (!activePage) return;
+            
+            const block = activePage.blocks.find(b => b.id === blockId);
+            if (block) {
+                block.content = content;
+                saveData();
+            }
+        }
+
+        // Toggle todo checked state
+        function toggleTodo(blockId) {
+            const activePage = appData.pages.find(p => p.id === appData.activePageId);
+            if (!activePage) return;
+            
+            const block = activePage.blocks.find(b => b.id === blockId);
+            if (block && block.type === 'todo') {
+                block.checked = !block.checked;
+                saveData();
+                
+                // Update UI
+                const blockElement = document.querySelector(`[data-block-id="${blockId}"]`);
+                const checkbox = blockElement.querySelector('.todo-checkbox');
+                checkbox.classList.toggle('checked');
+                checkbox.textContent = block.checked ? '✓' : '';
+            }
+        }
+
+        // Handle block keydown events
+        function handleBlockKeydown(e) {
+            if (e.key === '/') {
+                e.preventDefault();
+                showBlockMenu(e.target);
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addNewBlockAfter(e.target.closest('.block'));
+            } else if (e.key === 'Backspace' && e.target.textContent === '') {
+                e.preventDefault();
+                deleteBlock(e.target.closest('.block'));
+            }
+        }
+
+        // Show block menu
+        function showBlockMenu(targetBlock) {
+            const rect = targetBlock.getBoundingClientRect();
+            blockMenu.style.top = `${rect.top + window.scrollY}px`;
+            blockMenu.style.left = `${rect.left + window.scrollX}px`;
+            blockMenu.classList.remove('hidden');
+            
+            // Add event listener to close menu when clicking outside
+            const closeMenu = (e) => {
+                if (!blockMenu.contains(e.target)) {
+                    blockMenu.classList.add('hidden');
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            
+            setTimeout(() => {
+                document.addEventListener('click', closeMenu);
+            }, 10);
+            
+            // Add event listeners to menu items
+            blockMenu.querySelectorAll('.block-menu-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const blockType = item.dataset.type;
+                    changeBlockType(targetBlock.closest('.block'), blockType);
+                    blockMenu.classList.add('hidden');
+                });
+            });
+        }
+
+        // Change block type
+        function changeBlockType(blockElement, newType) {
+            const blockId = blockElement.dataset.blockId;
+            const activePage = appData.pages.find(p => p.id === appData.activePageId);
+            if (!activePage) return;
+            
+            const block = activePage.blocks.find(b => b.id === blockId);
+            if (block) {
+                block.type = newType;
+                saveData();
+                
+                // Re-render the block
+                const newBlockElement = createBlockElement(block);
+                blockElement.replaceWith(newBlockElement);
+                newBlockElement.querySelector('.block-content').focus();
+            }
+        }
+
+        // Add new block after current block
+        function addNewBlockAfter(blockElement) {
+            const activePage = appData.pages.find(p => p.id === appData.activePageId);
+            if (!activePage) return;
+            
+            const blockId = blockElement.dataset.blockId;
+            const blockIndex = activePage.blocks.findIndex(b => b.id === blockId);
+            
+            const newBlock = {
+                id: 'b' + Date.now(),
+                type: 'paragraph',
+                content: ''
+            };
+            
+            activePage.blocks.splice(blockIndex + 1, 0, newBlock);
+            saveData();
+            
+            const newBlockElement = createBlockElement(newBlock);
+            blockElement.after(newBlockElement);
+            newBlockElement.querySelector('.block-content').focus();
+        }
+
+        // Delete block
+        function deleteBlock(blockElement) {
+            const activePage = appData.pages.find(p => p.id === appData.activePageId);
+            if (!activePage) return;
+            
+            const blockId = blockElement.dataset.blockId;
+            const blockIndex = activePage.blocks.findIndex(b => b.id === blockId);
+            
+            // Don't delete if it's the only block
+            if (activePage.blocks.length <= 1) return;
+            
+            activePage.blocks.splice(blockIndex, 1);
+            saveData();
+            
+            // Focus previous block or next block if available
+            const prevBlock = blockElement.previousElementSibling;
+            const nextBlock = blockElement.nextElementSibling;
+            
+            if (prevBlock && prevBlock.classList.contains('block')) {
+                prevBlock.querySelector('.block-content').focus();
+            } else if (nextBlock && nextBlock.classList.contains('block')) {
+                nextBlock.querySelector('.block-content').focus();
+            }
+            
+            blockElement.remove();
+        }
+
+        // Rename page
+        function renamePage(pageId) {
+            const page = appData.pages.find(p => p.id === pageId);
+            if (!page) return;
+            
+            const newTitle = prompt('Nama halaman baru:', page.title);
+            if (newTitle && newTitle.trim() !== '') {
+                page.title = newTitle.trim();
+                saveData();
+                renderPages();
+                
+                if (pageId === appData.activePageId) {
+                    pageTitleInput.value = page.title;
+                }
+            }
+        }
+
+        // Delete page
+        function deletePage(pageId) {
+            if (appData.pages.length <= 1) {
+                alert('Tidak bisa menghapus satu-satunya halaman!');
+                return;
+            }
+            
+            if (confirm('Apakah Anda yakin ingin menghapus halaman ini?')) {
+                const pageIndex = appData.pages.findIndex(p => p.id === pageId);
+                appData.pages.splice(pageIndex, 1);
+                
+                if (appData.activePageId === pageId) {
+                    setActivePage(appData.pages[0].id);
+                }
+                
+                saveData();
+                renderPages();
+            }
+        }
+
+        // Render calendar
+        function renderCalendar() {
+            const year = appData.calendarDate.getFullYear();
+            const month = appData.calendarDate.getMonth();
+            
+            // Update calendar title
+            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            calendarTitle.textContent = `${monthNames[month]} ${year}`;
+            
+            // Clear calendar grid
+            calendarGrid.innerHTML = '';
+            
+            // Add day headers
+            const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            dayNames.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            // Get first day of month and number of days
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay();
+            
+            // Add empty cells for days before the first day of the month
+            for (let i = 0; i < startingDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Add days of the month
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                const currentDate = new Date(year, month, day);
+                if (currentDate.getTime() === today.getTime()) {
+                    dayElement.classList.add('today');
+                }
+                
+                dayElement.innerHTML = `
+                    <div class="day-number">${day}</div>
+                    <div class="add-event-btn">+</div>
+                `;
+                
+                // Add events for this day
+                const events = getAllEventsForDate(year, month, day);
+                events.forEach(event => {
+                    const eventElement = document.createElement('div');
+                    eventElement.className = 'calendar-event';
+                    eventElement.style.background = `${event.color}20`;
+                    eventElement.style.borderLeftColor = event.color;
+                    eventElement.textContent = event.title;
+                    eventElement.title = `${event.time} - ${event.title}`;
+                    
+                    eventElement.addEventListener('click', () => {
+                        editEvent(event.id);
+                    });
+                    
+                    dayElement.appendChild(eventElement);
+                });
+                
+                // Add event listener to add event button
+                const addEventButton = dayElement.querySelector('.add-event-btn');
+                addEventButton.addEventListener('click', () => {
+                    openEventModal(year, month, day);
+                });
+                
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        // Get all events for a specific date
+        function getAllEventsForDate(year, month, day) {
+            const events = [];
+            const targetDate = new Date(year, month, day).toISOString().split('T')[0];
+            
+            appData.pages.forEach(page => {
+                page.events.forEach(event => {
+                    if (event.date === targetDate) {
+                        events.push({
+                            ...event,
+                            pageTitle: page.title,
+                            pageId: page.id
+                        });
+                    }
+                });
+            });
+            
+            return events;
+        }
+
+        // Open event modal
+        function openEventModal(year, month, day, eventId = null) {
+            // Set default date
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            eventDateInput.value = dateStr;
+            
+            // Set default time to current time + 1 hour
+            const now = new Date();
+            now.setHours(now.getHours() + 1);
+            eventTimeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // Clear other fields
+            eventTitleInput.value = '';
+            eventDescriptionInput.value = '';
+            
+            // Set default color
+            colorOptions[0].classList.add('selected');
+            
+            // Store event ID if editing
+            eventModal.dataset.eventId = eventId || '';
+            eventModal.dataset.pageId = appData.activePageId;
+            
+            // Show modal
+            eventModal.classList.remove('hidden');
+        }
+
+        // Edit event
+        function editEvent(eventId) {
+            // Find the event
+            let event = null;
+            let pageId = null;
+            
+            for (const page of appData.pages) {
+                const foundEvent = page.events.find(e => e.id === eventId);
+                if (foundEvent) {
+                    event = foundEvent;
+                    pageId = page.id;
+                    break;
+                }
+            }
+            
+            if (!event) return;
+            
+            // Set form values
+            eventTitleInput.value = event.title;
+            eventDateInput.value = event.date;
+            eventTimeInput.value = event.time;
+            eventDescriptionInput.value = event.description || '';
+            
+            // Set color
+            colorOptions.forEach(option => {
+                option.classList.remove('selected');
+                if (option.dataset.color === event.color) {
+                    option.classList.add('selected');
+                }
+            });
+            
+            // Store event ID and page ID
+            eventModal.dataset.eventId = eventId;
+            eventModal.dataset.pageId = pageId;
+            
+            // Show modal
+            eventModal.classList.remove('hidden');
+        }
+
+        // Save event
+        function saveEvent() {
+            const eventId = eventModal.dataset.eventId;
+            const pageId = eventModal.dataset.pageId || appData.activePageId;
+            
+            const title = eventTitleInput.value.trim();
+            const date = eventDateInput.value;
+            const time = eventTimeInput.value;
+            const description = eventDescriptionInput.value.trim();
+            const color = document.querySelector('.color-option.selected').dataset.color;
+            
+            if (!title || !date || !time) {
+                alert('Judul, tanggal, dan waktu harus diisi!');
+                return;
+            }
+            
+            const page = appData.pages.find(p => p.id === pageId);
+            if (!page) return;
+            
+            if (eventId) {
+                // Update existing event
+                const eventIndex = page.events.findIndex(e => e.id === eventId);
+                if (eventIndex !== -1) {
+                    page.events[eventIndex] = {
+                        ...page.events[eventIndex],
+                        title,
+                        date,
+                        time,
+                        description,
+                        color
+                    };
+                }
+            } else {
+                // Create new event
+                const newEvent = {
+                    id: 'e' + Date.now(),
+                    title,
+                    date,
+                    time,
+                    description,
+                    color
+                };
+                
+                page.events.push(newEvent);
+            }
+            
+            saveData();
+            closeEventModal();
+            renderCalendar();
+            
+            // If we're in editor view, refresh to show events
+            if (appData.currentView === 'editor') {
+                renderPageContent();
+            }
+        }
+
+        // Close event modal
+        function closeEventModal() {
+            eventModal.classList.add('hidden');
+        }
+
+        // AI Assistant functions
+        function toggleAIPanel() {
+            aiPanel.classList.toggle('hidden');
+        }
+
+        function sendAIMessage(message) {
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'ai-message user';
+            userMessage.textContent = message;
+            aiConversation.appendChild(userMessage);
+            
+            // Clear input
+            aiInput.value = '';
+            
+            // Scroll to bottom
+            aiConversation.scrollTop = aiConversation.scrollHeight;
+            
+            // Simulate AI thinking
+            setTimeout(() => {
+                const aiResponse = generateAIResponse(message);
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'ai-message assistant';
+                aiMessage.textContent = aiResponse;
+                aiConversation.appendChild(aiMessage);
+                
+                // Scroll to bottom
+                aiConversation.scrollTop = aiConversation.scrollHeight;
+            }, 1000);
+        }
+
+        function generateAIResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes('rundown') || lowerMessage.includes('jadwal')) {
+                return `Berikut contoh rundown acara musik yang efektif:
+
+16:00 - Persiapan venue dan soundcheck
+17:30 - Kedatangan artis dan briefing
+18:30 - Pintu dibuka untuk penonton
+19:00 - Pembukaan oleh DJ
+20:00 - Penampilan artis utama
+21:30 - Sesi meet & greet
+22:00 - Acara selesai
+
+Anda ingin menyesuaikan rundown ini untuk acara Anda?`;
+            } else if (lowerMessage.includes('deskripsi') || lowerMessage.includes('tulis')) {
+                return `Deskripsi event yang menarik harus mencakup:
+
+1. Tema dan konsep acara
+2. Highlight utama (artis, aktivitas spesial)
+3. Informasi tanggal, waktu, dan lokasi
+4. Harga tiket dan cara pembelian
+5. Kontak untuk informasi lebih lanjut
+
+Contoh: "Bergabunglah dengan kami dalam malam spektakuler dengan penampilan langsung dari [Nama Artis] di [Nama Venue]. Acara ini akan menghadirkan [Jenis Musik] terbaik dengan suasana yang tak terlupakan. Jangan lewatkan pengalaman musik yang memukau ini!"`;
+            } else if (lowerMessage.includes('checklist') || lowerMessage.includes('persiapan')) {
+                return `Checklist persiapan event yang komprehensif:
+
+✅ 2 bulan sebelumnya: Tentukan konsep dan anggaran
+✅ 1 bulan sebelumnya: Booking venue dan artis
+✅ 3 minggu sebelumnya: Buat materi promosi
+✅ 2 minggu sebelumnya: Mulai penjualan tiket
+✅ 1 minggu sebelumnya: Briefing dengan kru
+✅ 3 hari sebelumnya: Konfirmasi semua vendor
+✅ 1 hari sebelumnya: Setup venue dan equipment
+✅ Hari H: Final check dan eksekusi acara
+
+Ada bagian tertentu yang perlu penjelasan lebih detail?`;
+            } else if (lowerMessage.includes('nama') || lowerMessage.includes('saran')) {
+                return `Beberapa saran nama event yang menarik:
+
+• "Harmoni Malam: Konser Spektakuler 2025"
+• "Rhythm Revolution: Festival Musik Modern"
+• "Euphoria Night: Pengalaman Audio Visual"
+• "Beat Connection: Rapat Jaringan & Musik"
+• "Symphony of Stars: Gala Dinner & Performance"
+
+Nama event harus mencerminkan tema, target audiens, dan jenis acara. Mana yang paling sesuai dengan konsep Anda?`;
+            } else {
+                return `Saya adalah AI Assistant khusus untuk Event Organizer. Saya dapat membantu Anda dengan:
+
+• Membuat rundown dan jadwal acara
+• Menulis deskripsi event yang menarik
+• Menyusun checklist persiapan
+• Memberi saran nama event
+• Merangkum catatan panjang
+
+Coba tanyakan salah satu topik di atas, atau jelaskan kebutuhan spesifik event Anda!`;
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Sidebar toggle
+            toggleSidebarBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+            });
+            
+            // Add page
+            addPageBtn.addEventListener('click', () => {
+                createNewPage();
+            });
+            
+            // Search pages
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                document.querySelectorAll('.page-item').forEach(item => {
+                    const title = item.querySelector('.page-title').textContent.toLowerCase();
+                    if (title.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+            
+            // View toggle
+            viewBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const view = btn.dataset.view;
+                    
+                    viewBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    viewContents.forEach(content => {
+                        if (content.id === `${view}-view`) {
+                            content.classList.remove('hidden');
+                            appData.currentView = view;
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                    
+                    if (view === 'calendar') {
+                        renderCalendar();
+                    }
+                });
+            });
+            
+            // Page title input
+            pageTitleInput.addEventListener('input', (e) => {
+                const activePage = appData.pages.find(p => p.id === appData.activePageId);
+                if (activePage) {
+                    activePage.title = e.target.value;
+                    saveData();
+                    renderPages();
+                }
+            });
+            
+            // Page icon selection
+            pageIconOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const activePage = appData.pages.find(p => p.id === appData.activePageId);
+                    if (activePage) {
+                        activePage.icon = option.textContent;
+                        saveData();
+                        renderPages();
+                        
+                        pageIconOptions.forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                    }
+                });
+            });
+            
+            // Add block button
+            addBlockBtn.addEventListener('click', () => {
+                const activePage = appData.pages.find(p => p.id === appData.activePageId);
+                if (!activePage) return;
+                
+                const newBlock = {
+                    id: 'b' + Date.now(),
+                    type: 'paragraph',
+                    content: ''
+                };
+                
+                activePage.blocks.push(newBlock);
+                saveData();
+                
+                const newBlockElement = createBlockElement(newBlock);
+                blocksContainer.insertBefore(newBlockElement, addBlockBtn);
+                newBlockElement.querySelector('.block-content').focus();
+            });
+            
+            // AI Assistant
+            aiToggle.addEventListener('click', toggleAIPanel);
+            aiClose.addEventListener('click', toggleAIPanel);
+            aiAssistantBtn.addEventListener('click', toggleAIPanel);
+            
+            aiInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && aiInput.value.trim() !== '') {
+                    sendAIMessage(aiInput.value.trim());
+                }
+            });
+            
+            aiQuickActions.forEach(action => {
+                action.addEventListener('click', () => {
+                    sendAIMessage(action.textContent);
+                });
+            });
+            
+            // Event modal
+            saveEventBtn.addEventListener('click', saveEvent);
+            cancelEventBtn.addEventListener('click', closeEventModal);
+            
+            document.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    eventModal.classList.add('hidden');
+                });
+            });
+            
+            // Color options
+            colorOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    colorOptions.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                });
+            });
+            
+            // Add event button
+            addEventBtn.addEventListener('click', () => {
+                const today = new Date();
+                openEventModal(today.getFullYear(), today.getMonth(), today.getDate());
+            });
+            
+            // Calendar navigation
+            prevMonthBtn.addEventListener('click', () => {
+                appData.calendarDate.setMonth(appData.calendarDate.getMonth() - 1);
+                saveData();
+                renderCalendar();
+            });
+            
+            nextMonthBtn.addEventListener('click', () => {
+                appData.calendarDate.setMonth(appData.calendarDate.getMonth() + 1);
+                saveData();
+                renderCalendar();
+            });
+            
+            // Export data
+            exportBtn.addEventListener('click', () => {
+                const dataStr = JSON.stringify(appData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = 'notion-eo-backup.json';
+                link.click();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ctrl+S to save
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    saveData();
+                    // Show save notification
+                    const notification = document.createElement('div');
+                    notification.textContent = 'Data tersimpan!';
+                    notification.style.position = 'fixed';
+                    notification.style.bottom = '20px';
+                    notification.style.left = '50%';
+                    notification.style.transform = 'translateX(-50%)';
+                    notification.style.background = 'var(--accent)';
+                    notification.style.color = 'white';
+                    notification.style.padding = '8px 16px';
+                    notification.style.borderRadius = '4px';
+                    notification.style.zIndex = '10000';
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 2000);
+                }
+                
+                // Ctrl+K to search
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
