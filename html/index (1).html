@@ -1,0 +1,539 @@
+<!-- 
+Project: Timeline Kolaboratif Seni - Oktober–November
+Fitur: Login mock, Markdown editor, ekspor/impor (MD, PDF, DOCX, XLSX, ICS)
+Desain: UI modern seperti Notion + Linear + Framer
+Teknologi: TailwindCSS + JS Vanilla + LocalStorage
+Migrasi ke Next.js: pisahkan menjadi komponen (Home, Timeline, Editor, Modal)
+Auth nyata: integrasikan NextAuth.js + Supabase
+-->
+
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Timeline Pementasan Oktober–November</title>
+  <meta name="description" content="Platform kolaboratif untuk mengatur, mendokumentasikan, dan menampilkan jadwal seni secara interaktif." />
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = {theme: {extend: {colors:{accent:'#9b6cff',gold:'#f3d29a',glass:'#ffffff66'}}}};</script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Libraries via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ics/dist/ics.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.0/gsap.min.js"></script>
+  <!-- docx (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.4.0/build/index.umd.js"></script>
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/lucide.min.js"></script>
+
+  <style>
+    :root{--glass: rgba(255,255,255,0.08);--glass-2: rgba(255,255,255,0.06)}
+    html,body{font-family:Inter, Poppins, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    .glass{backdrop-filter: blur(6px); background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.06)}
+    .soft-shadow{box-shadow: 0 6px 20px rgba(99,49,154,0.08)}
+    .card-hover{transition: transform 220ms cubic-bezier(.2,.9,.3,1), box-shadow 220ms;}
+    .card-hover:hover{transform: translateY(-6px); box-shadow: 0 18px 40px rgba(99,49,154,0.12)}
+    .fade-in{opacity:0; transform: translateY(6px); animation:fadeIn 700ms forwards}
+    @keyframes fadeIn{to{opacity:1; transform:none}}
+    .ripple{position:relative; overflow:hidden}
+    .ripple:after{content:""; position:absolute; border-radius:50%; transform:scale(0); background:rgba(255,255,255,0.2); width:100px; height:100px; opacity:0; transition: transform 600ms, opacity 600ms}
+    .ripple:active:after{transform:scale(4); opacity:1; transition: 0s}
+    /* responsive timeline */
+    @media (max-width:768px){ .timeline-vertical{display:flex; gap:1rem; overflow-x:auto; padding-bottom:12px} .timeline-vertical .item{min-width:260px; flex:0 0 auto} }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-[#f6f1ff] via-white to-[#fffaf5] min-h-screen text-gray-800">
+  <div id="app" class="max-w-[1200px] mx-auto p-6">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl glass flex items-center justify-center soft-shadow">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9b6cff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"></path></svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-semibold">Timeline Pementasan Oktober–November</h1>
+          <p class="text-sm text-gray-500">Kelola agenda seni, kolaborasi, dan dokumentasi dalam satu ruang interaktif.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="btn-cta" class="px-4 py-2 rounded-lg bg-gradient-to-r from-[#b68bff] to-[#9b6cff] text-white shadow-lg hover:brightness-105 ripple">Lihat Timeline</button>
+        <div id="user-area" class="flex items-center gap-3">
+          <div id="login-btn" class="px-3 py-2 rounded-lg glass card-hover cursor-pointer">Login</div>
+          <div id="avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#b68bff] to-[#f3d29a] text-white flex items-center justify-center font-semibold hidden"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hash routing container -->
+    <main class="space-y-6">
+
+      <!-- Routes -->
+      <section id="route-home" class="route fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          <div class="p-6 glass rounded-2xl soft-shadow">
+            <h2 class="text-3xl font-bold mb-2">Timeline Pementasan Oktober–November</h2>
+            <p class="text-gray-600 mb-4">Platform kolaboratif untuk mengatur, mendokumentasikan, dan menampilkan jadwal seni secara interaktif. Edit dengan Markdown, ekspor ke PDF, Word, Excel, bahkan kalender — semua langsung di browser.</p>
+            <div class="flex gap-3">
+              <a href="#/timeline" class="px-4 py-2 rounded-lg bg-white/8 border border-white/6 text-white backdrop-blur-md">Lihat Timeline</a>
+              <button id="start-login" class="px-4 py-2 rounded-lg bg-gradient-to-r from-[#ffdca3] to-[#f3d29a]">Mulai Login</button>
+            </div>
+          </div>
+          <div class="p-6 glass rounded-2xl soft-shadow">
+            <div class="h-56 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-6xl mb-2">📅</div>
+                <div class="text-lg font-semibold">Atur jadwal & ekspor ke kalender</div>
+                <p class="text-sm text-gray-500">Impor/ekspor lintas format: .md, .pdf, .docx, .xlsx, .ics</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="route-timeline" class="route hidden">
+        <!-- Controls -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <input id="search" placeholder="Cari kegiatan..." class="pl-10 pr-4 py-2 rounded-lg glass w-64 focus:outline-none" />
+              <span class="absolute left-3 top-2.5 text-gray-400"><i data-feather="search"></i></span>
+            </div>
+            <select id="filter-category" class="py-2 px-3 rounded-lg glass">
+              <option value="">Semua Kategori</option>
+            </select>
+            <select id="filter-status" class="py-2 px-3 rounded-lg glass">
+              <option value="">Semua Status</option>
+              <option value="Mendatang">Mendatang</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-import" class="px-3 py-2 rounded-lg glass">Import</button>
+            <div class="dropdown relative">
+              <button id="btn-export" class="px-3 py-2 rounded-lg glass">Export ▾</button>
+              <div id="export-menu" class="hidden absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg p-2">
+                <button data-export="md" class="export-btn block w-full text-left px-3 py-1 rounded hover:bg-gray-100">Export .md</button>
+                <button data-export="pdf" class="export-btn block w-full text-left px-3 py-1 rounded hover:bg-gray-100">Export .pdf</button>
+                <button data-export="docx" class="export-btn block w-full text-left px-3 py-1 rounded hover:bg-gray-100">Export .docx</button>
+                <button data-export="xlsx" class="export-btn block w-full text-left px-3 py-1 rounded hover:bg-gray-100">Export .xlsx</button>
+                <button data-export="ics" class="export-btn block w-full text-left px-3 py-1 rounded hover:bg-gray-100">Export .ics</button>
+                <button data-export="json" class="export-btn block w-full text-left px-3 py-1 rounded hover:bg-gray-100">Export .json</button>
+              </div>
+            </div>
+            <button id="btn-add" class="px-3 py-2 rounded-lg bg-gradient-to-r from-[#b68bff] to-[#9b6cff] text-white">Tambah Kegiatan</button>
+          </div>
+        </div>
+
+        <!-- Agenda Terdekat -->
+        <div id="agenda-highlights" class="mb-4 p-4 rounded-2xl shadow-md" style="background:linear-gradient(90deg,#fff7e6,#fffaf0); border:1px solid rgba(243,210,154,0.4);">
+          <h3 class="font-semibold mb-2">Agenda Terdekat</h3>
+          <div id="highlights" class="flex gap-3 overflow-x-auto timeline-vertical"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="md:col-span-2">
+            <!-- Timeline list -->
+            <div id="timeline" class="space-y-4"></div>
+          </div>
+
+          <aside class="space-y-4">
+            <div class="glass p-4 rounded-2xl soft-shadow">
+              <h4 class="font-semibold mb-2">Editor (Markdown)</h4>
+              <div class="space-y-2">
+                <input id="editor-title" placeholder="Judul kegiatan" class="w-full p-2 rounded bg-[#fff]/6" />
+                <textarea id="editor-md" rows="6" class="w-full p-2 rounded bg-[#fff] /6" placeholder="Tulis deskripsi dengan Markdown..."></textarea>
+                <div class="flex gap-2">
+                  <button id="save-item" class="px-3 py-2 rounded-lg bg-gradient-to-r from-[#b68bff] to-[#9b6cff] text-white">Simpan</button>
+                  <button id="delete-item" class="px-3 py-2 rounded-lg glass">Hapus</button>
+                </div>
+                <div class="mt-2">
+                  <div class="text-sm text-gray-500">Preview:</div>
+                  <div id="preview" class="prose max-w-full p-2 mt-1 rounded bg-white/5"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass p-4 rounded-2xl soft-shadow">
+              <h4 class="font-semibold mb-2">Simpan & Riwayat</h4>
+              <div id="history-list" class="space-y-2 max-h-48 overflow-auto"></div>
+            </div>
+
+            <div class="glass p-4 rounded-2xl soft-shadow">
+              <h4 class="font-semibold mb-2">Preview Kalender</h4>
+              <div id="calendar-preview" class="p-2 bg-white/5 rounded h-40 flex items-center justify-center">(Kalender sederhana)</div>
+              <button id="export-ics-single" class="mt-2 px-3 py-2 rounded-lg glass">Export .ics untuk event terpilih</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="route-login" class="route hidden">
+        <!-- empty, login handled as modal -->
+      </section>
+
+      <!-- Footer -->
+      <footer class="mt-6 text-center text-sm text-gray-500">&copy; 2025 Timeline Pementasan • <a href="#" class="underline">GitHub</a></footer>
+    </main>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="modal-root" class="fixed inset-0 flex items-center justify-center hidden z-50">
+    <div class="absolute inset-0 bg-black/40" onclick="closeModal()"></div>
+    <div class="relative w-full max-w-md p-6 glass rounded-2xl soft-shadow z-10">
+      <h3 class="text-lg font-semibold mb-2">Login Mock</h3>
+      <p class="text-sm text-gray-500 mb-4">Masuk untuk mengaktifkan mode kolaborasi. (Mock — tidak mengirim data ke server)</p>
+      <input id="login-email" class="w-full p-2 rounded mb-2" placeholder="Email" />
+      <input id="login-pass" class="w-full p-2 rounded mb-4" placeholder="Password" type="password" />
+      <div class="flex gap-2 justify-end">
+        <button onclick="mockOAuth('google')" class="px-3 py-2 rounded-lg glass">Login via Google</button>
+        <button onclick="mockOAuth('github')" class="px-3 py-2 rounded-lg glass">Login via GitHub</button>
+        <button id="login-submit" class="px-3 py-2 rounded-lg bg-gradient-to-r from-[#ffdca3] to-[#f3d29a]">Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toasts" class="fixed right-4 bottom-4 space-y-3 z-50"></div>
+
+<script>
+// --- Seed data ---
+const SEED = [
+  { tanggal: '2025-10-20', kegiatan: 'Finalisasi naskah & Rilis proposal sponsor', kategori: 'Agenda Terdekat', status: 'Mendatang' },
+  { tanggal: '2025-10-24', kegiatan: 'Pengajuan kolaborasi MSK BATIK 1', kategori: 'Agenda Terdekat', status: 'Mendatang' },
+  { periode: 'M1 Oktober', kegiatan: 'Penyusunan Kepanitian, Penokohan, Bedah Naskah', kategori: 'Persiapan' },
+  { periode: 'M2 Oktober – M3 November', kegiatan: 'Latihan', kategori: 'Latihan' },
+  { periode: 'M4 Oktober', kegiatan: 'Workshop', kategori: 'Workshop' },
+  { periode: 'M1 November', kegiatan: 'Perancangan Artistik', kategori: 'Persiapan' },
+  { periode: 'M4 November', kegiatan: 'Pementasan', kategori: 'Puncak Acara' }
+];
+
+// --- LocalStorage keys ---
+const LS_KEY = 'pementasan.timeline.v1';
+const LS_USER = 'pementasan.user.v1';
+const LS_HISTORY = 'pementasan.history.v1';
+
+// --- State ---
+let state = { items: [], user: null, editingId: null };
+
+// --- Utilities ---
+function toast(msg, type='info', ttl=3000){
+  const el = document.createElement('div');
+  el.className = 'glass p-3 rounded-md shadow-md max-w-xs animate-slide-bottom';
+  el.innerHTML = `<div class="text-sm">${msg}</div>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=> el.remove(), ttl);
+}
+
+function saveState(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state.items));
+  toast('Tersimpan ke localStorage', 'success', 1200);
+}
+
+function loadState(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(raw) return JSON.parse(raw);
+  return JSON.parse(JSON.stringify(SEED));
+}
+
+function saveUser(){ localStorage.setItem(LS_USER, JSON.stringify(state.user || {})); }
+function loadUser(){ const u = localStorage.getItem(LS_USER); return u? JSON.parse(u): null }
+
+// --- Initialization ---
+function init(){
+  state.items = loadState();
+  state.user = loadUser();
+  renderRoutes();
+  renderUser();
+  populateFilters();
+  renderTimeline();
+  renderHighlights();
+  setupEvents();
+  if(!location.hash) location.hash = '#/home';
+}
+
+// --- Routing ---
+function renderRoutes(){
+  document.querySelectorAll('.route').forEach(r=> r.classList.add('hidden'));
+  const hash = location.hash || '#/home';
+  if(hash.startsWith('#/timeline')) document.getElementById('route-timeline').classList.remove('hidden');
+  else document.getElementById('route-home').classList.remove('hidden');
+}
+window.addEventListener('hashchange', renderRoutes);
+
+// --- User / Login ---
+function renderUser(){
+  const avatar = document.getElementById('avatar');
+  const loginBtn = document.getElementById('login-btn');
+  if(state.user && state.user.email){
+    loginBtn.style.display = 'none';
+    avatar.style.display = 'flex';
+    avatar.textContent = state.user.name ? initials(state.user.name) : (state.user.email[0]||'U').toUpperCase();
+  } else { loginBtn.style.display='block'; avatar.style.display='none' }
+}
+function initials(name){ return name.split(' ').map(s=>s[0]||'').slice(0,2).join('').toUpperCase(); }
+
+function openModal(){ document.getElementById('modal-root').classList.remove('hidden'); }
+function closeModal(){ document.getElementById('modal-root').classList.add('hidden'); }
+
+function mockOAuth(provider){ closeModal(); state.user = { name: provider==='google' ? 'User Google' : 'User GitHub', email: provider+'@example.com' }; saveUser(); renderUser(); toast('Login via '+provider+' (dummy)'); }
+
+// --- Render helpers ---
+function renderTimeline(filterText=''){ 
+  const container = document.getElementById('timeline'); container.innerHTML='';
+  const items = state.items.filter(i=>{
+    if(filterText){ return (i.kegiatan||'').toLowerCase().includes(filterText.toLowerCase()); }
+    return true;
+  });
+  items.forEach((it, idx)=>{
+    const id = idx;
+    const el = document.createElement('div');
+    el.className = 'glass p-4 rounded-2xl card-hover card-item';
+    el.innerHTML = `
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="text-sm text-gray-400">${it.tanggal?it.tanggal: it.periode || ''}</div>
+          <div class="text-lg font-semibold">${it.kegiatan}</div>
+          <div class="text-sm text-gray-500 mt-2">Kategori: ${it.kategori || '-'} • Status: ${it.status || '-'}</div>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+          <div class="text-sm text-gray-400">${it.status||''}</div>
+          <div class="flex gap-2">
+            <button class="open-edit p-2 rounded bg-white/6" data-id="${id}">Edit</button>
+            <button class="export-item p-2 rounded glass" data-id="${id}">Export</button>
+          </div>
+        </div>
+      </div>
+    `;
+    el.querySelector('.open-edit').addEventListener('click', ()=> openEditor(id));
+    el.querySelector('.export-item').addEventListener('click', ()=> exportSingleItem(id));
+    container.appendChild(el);
+  });
+}
+
+function renderHighlights(){
+  const container = document.getElementById('highlights'); container.innerHTML='';
+  const nearest = state.items.filter(i=>i.tanggal && i.status === 'Mendatang').slice(0,6);
+  nearest.forEach(it=>{
+    const el = document.createElement('div'); el.className='p-3 rounded-lg glass soft-shadow item';
+    el.innerHTML = `<div class="text-sm font-semibold">${it.tanggal}</div><div class="text-sm">${it.kegiatan}</div>`;
+    container.appendChild(el);
+  });
+}
+
+function populateFilters(){
+  const cats = new Set(state.items.map(i=>i.kategori).filter(Boolean));
+  const sel = document.getElementById('filter-category'); sel.innerHTML = '<option value="">Semua Kategori</option>';
+  cats.forEach(c=> sel.innerHTML += `<option value="${c}">${c}</option>`);
+}
+
+// --- Editor ---
+function openEditor(id){
+  state.editingId = id;
+  const it = state.items[id];
+  document.getElementById('editor-title').value = it.kegiatan || '';
+  document.getElementById('editor-md').value = it.desc || '';
+  document.getElementById('preview').innerHTML = marked.parse(it.desc || '');
+}
+
+function clearEditor(){ state.editingId = null; document.getElementById('editor-title').value=''; document.getElementById('editor-md').value=''; document.getElementById('preview').innerHTML=''; }
+
+// autosave, history
+function pushHistory(snapshot){
+  let h = JSON.parse(localStorage.getItem(LS_HISTORY) || '[]');
+  h.unshift({ts: Date.now(), data: snapshot});
+  h = h.slice(0,5);
+  localStorage.setItem(LS_HISTORY, JSON.stringify(h));
+  renderHistory();
+}
+function renderHistory(){ const el = document.getElementById('history-list'); el.innerHTML=''; const h = JSON.parse(localStorage.getItem(LS_HISTORY) || '[]'); h.forEach((entry,i)=>{ const d = new Date(entry.ts); const btn = document.createElement('button'); btn.className='w-full text-left p-2 rounded glass'; btn.textContent = d.toLocaleString(); btn.addEventListener('click', ()=>{ state.items = entry.data; saveState(); renderTimeline(); renderHighlights(); populateFilters(); toast('Restore dari history'); }); el.appendChild(btn); }); }
+
+// --- Exports & Imports ---
+function exportAllAsMarkdown(){
+  const md = state.items.map(it=>{
+    const date = it.tanggal? `**Tanggal:** ${it.tanggal}` : (it.periode? `**Periode:** ${it.periode}` : '');
+    return `# ${it.kegiatan}\n${date}\n**Kategori:** ${it.kategori || ''}\n**Status:** ${it.status || ''}\n\n${it.desc || ''}`;
+  }).join('\n\n---\n\n');
+  const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+  saveAs(blob, 'timeline-pementasan.md');
+  toast('Export .md selesai');
+}
+
+async function exportAllAsPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y=10;
+  state.items.forEach((it, idx)=>{
+    doc.setFontSize(12); doc.text(it.kegiatan || '-', 10, y); y+=7;
+    doc.setFontSize(9); doc.text((it.tanggal||it.periode||'') + ' • ' + (it.kategori||''), 10, y); y+=6;
+    const text = (it.desc||'').replace(/\n/g,' ');
+    const split = doc.splitTextToSize(text, 180);
+    doc.setFontSize(9); doc.text(split, 10, y); y += split.length*5 + 6;
+    if(y>270){ doc.addPage(); y=10; }
+  });
+  const out = doc.output('blob'); saveAs(out, 'timeline-pementasan.pdf'); toast('Export .pdf selesai');
+}
+
+function exportAllAsXLSX(){
+  const ws = XLSX.utils.json_to_sheet(state.items.map(it=>({Tanggal: it.tanggal||it.periode||'', Kegiatan: it.kegiatan, Kategori: it.kategori, Status: it.status, Deskripsi: it.desc||''})));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Timeline');
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  saveAs(new Blob([wbout],{type:'application/octet-stream'}), 'timeline-pementasan.xlsx');
+  toast('Export .xlsx selesai');
+}
+
+function exportAllAsDOCX(){
+  // Use docx library (UMD via CDN)
+  try{
+    const doc = new docx.Document();
+    state.items.forEach(it=>{
+      doc.addSection({children:[ new docx.Paragraph({text: it.kegiatan || '', heading: docx.HeadingLevel.HEADING_2}), new docx.Paragraph({text: (it.tanggal||it.periode||'') + ' • ' + (it.kategori||'')}) , new docx.Paragraph({text: it.desc||''}) ]});
+    });
+    docx.Packer.toBlob(doc).then(blob=>{ saveAs(blob, 'timeline-pementasan.docx'); toast('Export .docx selesai'); });
+  }catch(e){
+    // fallback: save as simple html disguised as docx
+    const html = state.items.map(it=>`<h2>${it.kegiatan}</h2><p>${it.tanggal||it.periode||''} • ${it.kategori||''}</p><p>${(it.desc||'').replace(/\n/g,'<br/>')}</p>`).join('<hr/>');
+    const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+    saveAs(blob, 'timeline-pementasan.docx'); toast('Export .docx (fallback) selesai');
+  }
+}
+
+function exportAllAsICS(){
+  const cal = ics();
+  state.items.forEach(it=>{
+    if(it.tanggal){
+      const d = new Date(it.tanggal);
+      cal.addEvent(it.kegiatan, it.desc||'', '', d, d);
+    }
+  });
+  cal.download('timeline-pementasan');
+  toast('Export .ics selesai');
+}
+
+function exportAllAsJSON(){
+  const blob = new Blob([JSON.stringify(state.items, null, 2)],{type:'application/json'});
+  saveAs(blob, 'timeline-pementasan.json');
+  toast('Export .json selesai');
+}
+
+function exportSingleItem(id){
+  const it = state.items[id];
+  const md = `# ${it.kegiatan}\n${it.tanggal||it.periode||''}\n\n${it.desc||''}`;
+  saveAs(new Blob([md],{type:'text/markdown'}), `item-${id}.md`); toast('Export item .md');
+}
+
+// --- Import handlers ---
+function handleImportFile(file){
+  const name = file.name.toLowerCase();
+  const reader = new FileReader();
+  if(name.endsWith('.json')){
+    reader.onload = e=>{ try{ const data = JSON.parse(e.target.result); state.items = data; saveState(); renderTimeline(); renderHighlights(); populateFilters(); toast('Import JSON berhasil'); }catch(e){toast('Error parsing JSON','error');}}; reader.readAsText(file);
+  } else if(name.endsWith('.md')){
+    reader.onload = e=>{ const raw = e.target.result; // naive split by ---
+      const parts = raw.split(/^---$/m);
+      const items = parts.map(p=>{
+        const lines = p.trim().split('\n'); const title = lines[0].replace(/^#\s*/,'').trim(); const rest = lines.slice(1).join('\n'); return {kegiatan: title, desc: rest};
+      }).filter(Boolean);
+      state.items = state.items.concat(items); saveState(); renderTimeline(); renderHighlights(); populateFilters(); toast('Import .md berhasil'); };
+    reader.readAsText(file);
+  } else if(name.endsWith('.xlsx') || name.endsWith('.xls')){
+    reader.onload = e=>{ const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type:'array'}); const ws = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(ws); state.items = state.items.concat(json.map(r=>({tanggal:r.Tanggal||r.tanggal||'', kegiatan:r.Kegiatan||r.kegiatan||'', kategori:r.Kategori||r.kategori||'', status:r.Status||r.status||'', desc:r.Deskripsi||r.deskripsi||''}))); saveState(); renderTimeline(); renderHighlights(); populateFilters(); toast('Import .xlsx berhasil'); };
+    reader.readAsArrayBuffer(file);
+  } else if(name.endsWith('.ics')){
+    reader.onload = e=>{
+      // simple ICS parse: find SUMMARY and DTSTART
+      const text = e.target.result; const events = text.split('BEGIN:VEVENT').slice(1).map(block=>{ const sum = (block.match(/SUMMARY:(.*)/) || [,''])[1]; const dt = (block.match(/DTSTART[:;].*(\d{4}\d{2}\d{2})/)||[,''])[1]; const date = dt ? `${dt.slice(0,4)}-${dt.slice(4,6)}-${dt.slice(6,8)}` : ''; return {tanggal: date, kegiatan: sum, kategori: '', status: 'Mendatang'} }); state.items = state.items.concat(events); saveState(); renderTimeline(); renderHighlights(); populateFilters(); toast('Import .ics berhasil'); };
+    reader.readAsText(file);
+  } else {
+    toast('Format file tidak dikenali', 'error');
+  }
+}
+
+// --- Events setup ---
+function setupEvents(){
+  document.getElementById('btn-cta').addEventListener('click', ()=> location.hash='#/timeline');
+  document.getElementById('start-login').addEventListener('click', openModal);
+  document.getElementById('login-btn').addEventListener('click', openModal);
+  document.getElementById('login-submit').addEventListener('click', ()=>{
+    const email = document.getElementById('login-email').value || 'user@example.com';
+    const pass = document.getElementById('login-pass').value || '***';
+    state.user = {email, name: email.split('@')[0]}; saveUser(); renderUser(); closeModal(); toast('Login mock sukses');
+  });
+  document.getElementById('btn-add').addEventListener('click', ()=>{ const it = {tanggal: '', kegiatan: 'Kegiatan baru', kategori:'Agenda', status:'Mendatang', desc:''}; state.items.unshift(it); pushHistory(JSON.parse(JSON.stringify(state.items))); saveState(); renderTimeline(); populateFilters(); renderHighlights(); });
+
+  document.getElementById('editor-md').addEventListener('input', (e)=>{ document.getElementById('preview').innerHTML = marked.parse(e.target.value || ''); });
+  document.getElementById('save-item').addEventListener('click', ()=>{
+    const title = document.getElementById('editor-title').value; const md = document.getElementById('editor-md').value;
+    if(state.editingId===null){ // create
+      state.items.unshift({tanggal:'', kegiatan:title, kategori:'Agenda', status:'Mendatang', desc:md});
+    } else {
+      const it = state.items[state.editingId]; it.kegiatan = title; it.desc = md;
+    }
+    pushHistory(JSON.parse(JSON.stringify(state.items)));
+    saveState(); renderTimeline(); renderHighlights(); populateFilters(); clearEditor();
+  });
+  document.getElementById('delete-item').addEventListener('click', ()=>{
+    if(state.editingId===null) return toast('Tidak ada item yang dipilih');
+    state.items.splice(state.editingId,1); pushHistory(JSON.parse(JSON.stringify(state.items))); saveState(); renderTimeline(); renderHighlights(); populateFilters(); clearEditor(); toast('Item dihapus');
+  });
+
+  document.getElementById('search').addEventListener('input', (e)=> renderTimeline(e.target.value));
+  document.getElementById('filter-category').addEventListener('change', (e)=>{ const v = e.target.value; if(!v) renderTimeline(); else renderTimeline('', v); });
+
+  // export menu
+  document.getElementById('btn-export').addEventListener('click', ()=> document.getElementById('export-menu').classList.toggle('hidden'));
+  document.querySelectorAll('.export-btn').forEach(b=> b.addEventListener('click', (ev)=>{
+    const t = ev.target.dataset.export;
+    if(t==='md') exportAllAsMarkdown();
+    else if(t==='pdf') exportAllAsPDF();
+    else if(t==='xlsx') exportAllAsXLSX();
+    else if(t==='docx') exportAllAsDOCX();
+    else if(t==='ics') exportAllAsICS();
+    else if(t==='json') exportAllAsJSON();
+    document.getElementById('export-menu').classList.add('hidden');
+  }));
+
+  // import
+  document.getElementById('btn-import').addEventListener('click', ()=>{
+    const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,.md,.xlsx,.xls,.ics'; inp.onchange = (e)=>{ if(e.target.files && e.target.files[0]) handleImportFile(e.target.files[0]) }; inp.click();
+  });
+
+  document.getElementById('export-ics-single').addEventListener('click', ()=>{
+    const id = state.editingId; if(id===null){ toast('Pilih item terlebih dahulu'); return }
+    const it = state.items[id]; if(!it.tanggal){ toast('Event tidak memiliki tanggal'); return }
+    const cal = ics(); cal.addEvent(it.kegiatan, it.desc||'', '', new Date(it.tanggal), new Date(it.tanggal)); cal.download('event');
+  });
+
+  // avatar click -> logout
+  document.getElementById('avatar').addEventListener('click', ()=>{ state.user=null; saveUser(); renderUser(); toast('Logout (mock)'); });
+
+  // open editor when clicking timeline item: handled per item
+
+  // init history
+  renderHistory();
+
+  // small UI polish: lucide icons
+  try{ lucide.replace(); }catch(e){}
+}
+
+// --- Helpers for graceful fallback ---
+window.addEventListener('load', ()=>{
+  init();
+  // soft entrance animation
+  gsap.from('.fade-in',{y:12, opacity:0, stagger:0.06, duration:0.7});
+});
+
+</script>
+</body>
+</html>

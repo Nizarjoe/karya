@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Calendar</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0a;--surface:#1a1a1a;--surface-light:#2a2a2a;--text:#ffffff;--text-muted:#a0a0a0;--accent:#3b82f6;--accent-hover:#2563eb;--border:rgba(255,255,255,0.1);--shadow:rgba(0,0,0,0.5);--glass-bg:rgba(255,255,255,0.05);--glass-border:rgba(255,255,255,0.1)}
+@media(prefers-color-scheme:light){:root{--bg:#f5f5f7;--surface:#ffffff;--surface-light:#f9f9f9;--text:#1d1d1f;--text-muted:#6e6e73;--accent:#007aff;--accent-hover:#0051d5;--border:rgba(0,0,0,0.1);--shadow:rgba(0,0,0,0.1);--glass-bg:rgba(255,255,255,0.8);--glass-border:rgba(0,0,0,0.1)}}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background 0.3s ease}
+.login-container{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--glass-bg);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:24px;padding:48px;width:100%;max-width:420px;box-shadow:0 20px 60px var(--shadow);animation:fadeIn 0.6s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.login-box h1{font-size:32px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,var(--accent),#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box p{color:var(--text-muted);margin-bottom:32px;font-size:14px}
+.input-group{margin-bottom:20px}
+.input-group label{display:block;margin-bottom:8px;font-size:13px;font-weight:500;color:var(--text-muted)}
+.input-group input{width:100%;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;transition:all 0.3s ease}
+.input-group input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,0.1)}
+.btn{width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s ease}
+.btn:hover{background:var(--accent-hover);transform:translateY(-2px);box-shadow:0 8px 24px rgba(59,130,246,0.3)}
+.btn:active{transform:translateY(0)}
+.app-container{display:none;padding:24px;max-width:1400px;margin:0 auto}
+.header{background:var(--glass-bg);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:20px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;box-shadow:0 4px 24px var(--shadow)}
+.header h1{font-size:24px;font-weight:700;background:linear-gradient(135deg,var(--accent),#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-actions{display:flex;gap:12px;flex-wrap:wrap}
+.btn-sm{padding:10px 20px;background:var(--surface-light);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.3s ease}
+.btn-sm:hover{background:var(--accent);color:white;transform:translateY(-2px);box-shadow:0 4px 16px rgba(59,130,246,0.3)}
+.calendar-nav{background:var(--glass-bg);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:18px;padding:20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 24px var(--shadow)}
+.nav-btn{background:var(--surface-light);border:1px solid var(--border);padding:10px 16px;border-radius:10px;color:var(--text);cursor:pointer;transition:all 0.3s ease;font-size:14px;font-weight:500}
+.nav-btn:hover{background:var(--accent);color:white;transform:scale(1.05)}
+.month-year{font-size:20px;font-weight:700;color:var(--text)}
+.calendar{background:var(--glass-bg);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;box-shadow:0 8px 32px var(--shadow)}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px}
+.weekday{text-align:center;font-size:12px;font-weight:600;color:var(--text-muted);padding:12px;text-transform:uppercase;letter-spacing:0.5px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.day{aspect-ratio:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s ease;position:relative;padding:8px}
+.day:hover{background:var(--surface-light);border-color:var(--accent);transform:translateY(-4px);box-shadow:0 8px 24px rgba(59,130,246,0.2)}
+.day.other-month{opacity:0.4}
+.day.today{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:white;font-weight:700;border:none}
+.day.has-event{background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(139,92,246,0.2));border-color:var(--accent)}
+.day.has-event::after{content:'';position:absolute;bottom:6px;width:6px;height:6px;background:var(--accent);border-radius:50%}
+.day-number{font-size:16px;font-weight:600;margin-bottom:4px}
+.event-dot{width:4px;height:4px;background:var(--accent);border-radius:50%;margin-top:4px}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal.active{display:flex;animation:modalFadeIn 0.3s ease}
+@keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
+.modal-content{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;width:100%;max-width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px var(--shadow);animation:modalSlideUp 0.4s ease}
+@keyframes modalSlideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.modal-header h2{font-size:24px;font-weight:700}
+.close-btn{background:none;border:none;font-size:28px;color:var(--text-muted);cursor:pointer;transition:all 0.3s ease;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.close-btn:hover{background:var(--surface-light);color:var(--text);transform:rotate(90deg)}
+.form-group{margin-bottom:20px}
+.form-group label{display:block;margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text-muted)}
+.form-group input,.form-group textarea{width:100%;padding:12px 16px;background:var(--surface-light);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;font-family:inherit;transition:all 0.3s ease}
+.form-group textarea{min-height:120px;resize:vertical}
+.form-group input:focus,.form-group textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,0.1)}
+.event-list{margin-top:24px}
+.event-item{background:var(--surface-light);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:all 0.3s ease}
+.event-item:hover{border-color:var(--accent);transform:translateX(4px)}
+.event-item h3{font-size:16px;font-weight:600;margin-bottom:8px;color:var(--accent)}
+.event-item p{font-size:14px;color:var(--text-muted);line-height:1.6}
+.event-item .delete-btn{margin-top:12px;padding:8px 16px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.3s ease}
+.event-item .delete-btn:hover{background:#ef4444;color:white}
+.music-player{position:fixed;bottom:24px;right:24px;background:var(--glass-bg);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:16px;padding:16px;box-shadow:0 8px 32px var(--shadow);display:flex;align-items:center;gap:12px;z-index:999;transition:all 0.3s ease}
+.music-player:hover{transform:translateY(-4px);box-shadow:0 12px 40px var(--shadow)}
+.music-btn{background:var(--surface-light);border:1px solid var(--border);width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s ease;font-size:18px}
+.music-btn:hover{background:var(--accent);color:white;transform:scale(1.1)}
+.volume-control{width:80px}
+.volume-control input{width:100%;cursor:pointer}
+input[type="file"]{display:none}
+.tooltip{position:absolute;background:var(--surface);border:1px solid var(--border);padding:12px;border-radius:10px;font-size:12px;z-index:100;pointer-events:none;box-shadow:0 4px 16px var(--shadow);max-width:200px;animation:tooltipFadeIn 0.2s ease}
+@keyframes tooltipFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){.header{padding:16px;flex-direction:column;align-items:stretch}.header-actions{flex-direction:column}.day-number{font-size:14px}.music-player{bottom:16px;right:16px;padding:12px}.modal-content{padding:24px;max-height:90vh}}
+</style>
+</head>
+<body>
+<!-- Login Screen -->
+<div class="login-container" id="loginScreen">
+<div class="login-box">
+<h1>Timeline Calendar</h1>
+<p>Masuk untuk mengelola jadwal Anda</p>
+<div class="input-group">
+<label for="username">Username</label>
+<input type="text" id="username" placeholder="Masukkan username">
+</div>
+<div class="input-group">
+<label for="password">Password</label>
+<input type="password" id="password" placeholder="Masukkan password">
+</div>
+<button class="btn" onclick="login()">Masuk</button>
+</div>
+</div>
+
+<!-- Main App -->
+<div class="app-container" id="appContainer">
+<div class="header">
+<h1>📅 Timeline Calendar</h1>
+<div class="header-actions">
+<button class="btn-sm" onclick="addTodayEvent()">➕ Event Hari Ini</button>
+<button class="btn-sm" onclick="exportCalendar()">📥 Ekspor</button>
+<button class="btn-sm" onclick="document.getElementById('importFile').click()">📤 Impor</button>
+<button class="btn-sm" onclick="logout()">🚪 Keluar</button>
+</div>
+</div>
+
+<div class="calendar-nav">
+<button class="nav-btn" onclick="previousMonth()">◀ Sebelumnya</button>
+<div class="month-year" id="monthYear"></div>
+<button class="nav-btn" onclick="nextMonth()">Berikutnya ▶</button>
+</div>
+
+<div class="calendar">
+<div class="weekdays">
+<div class="weekday">Min</div>
+<div class="weekday">Sen</div>
+<div class="weekday">Sel</div>
+<div class="weekday">Rab</div>
+<div class="weekday">Kam</div>
+<div class="weekday">Jum</div>
+<div class="weekday">Sab</div>
+</div>
+<div class="days" id="calendarDays"></div>
+</div>
+</div>
+
+<!-- Event Modal -->
+<div class="modal" id="eventModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="modalTitle">Event untuk <span id="modalDate"></span></h2>
+<button class="close-btn" onclick="closeModal()">×</button>
+</div>
+<div class="form-group">
+<label for="eventTitle">Judul Event</label>
+<input type="text" id="eventTitle" placeholder="Masukkan judul event">
+</div>
+<div class="form-group">
+<label for="eventDesc">Deskripsi</label>
+<textarea id="eventDesc" placeholder="Masukkan deskripsi event"></textarea>
+</div>
+<button class="btn" onclick="saveEvent()">💾 Simpan Event</button>
+<div class="event-list" id="eventList"></div>
+</div>
+</div>
+
+<!-- Music Player -->
+<div class="music-player">
+<button class="music-btn" id="playBtn" onclick="toggleMusic()">▶</button>
+<div class="volume-control">
+<input type="range" min="0" max="100" value="30" onchange="changeVolume(this.value)">
+</div>
+</div>
+
+<input type="file" id="importFile" accept=".json,.ics,.csv" onchange="importCalendar(this)">
+
+<audio id="bgMusic" loop>
+<source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMAAUFBQUFCIiIiIiIjAwMDAwPj4+Pj4+TExMTExZWVlZWVlnZ2dnZ3V1dXV1dYODg4ODkZGRkZGRn5+fn5+frKysrKy6urq6urrIyMjIyNbW1tbW1uTk5OTk8vLy8vLy//////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAQKAAAAAAAAHjBsM+RhAAAAAAD/+xDEAAPAAAGkAAAAIAAANIAAAARMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" type="audio/mpeg">
+</audio>
+
+<script>
+// State Management
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDate = null;
+let events = {};
+let isPlaying = false;
+
+// Authentication
+function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  
+  const storedUser = localStorage.getItem('calendarUser');
+  const storedPass = localStorage.getItem('calendarPass');
+  
+  if (!storedUser) {
+    if (username && password) {
+      localStorage.setItem('calendarUser', username);
+      localStorage.setItem('calendarPass', password);
+      showApp();
+    } else {
+      alert('Silakan isi username dan password untuk membuat akun baru');
+    }
+  } else {
+    if (username === storedUser && password === storedPass) {
+      showApp();
+    } else {
+      alert('Username atau password salah!');
+    }
+  }
+}
+
+function logout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appContainer').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'block';
+  loadEvents();
+  renderCalendar();
+}
+
+// Calendar Rendering
+function renderCalendar() {
+  const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  
+  document.getElementById('monthYear').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+  
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+  
+  const calendarDays = document.getElementById('calendarDays');
+  calendarDays.innerHTML = '';
+  
+  const today = new Date();
+  const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
+  
+  // Previous month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const day = daysInPrevMonth - i;
+    const dayEl = createDayElement(day, currentMonth - 1, true);
+    calendarDays.appendChild(dayEl);
+  }
+  
+  // Current month days
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayEl = createDayElement(day, currentMonth, false);
+    if (isCurrentMonth && day === today.getDate()) {
+      dayEl.classList.add('today');
+    }
+    calendarDays.appendChild(dayEl);
+  }
+  
+  // Next month days
+  const totalCells = calendarDays.children.length;
+  const remainingCells = 42 - totalCells;
+  for (let day = 1; day <= remainingCells; day++) {
+    const dayEl = createDayElement(day, currentMonth + 1, true);
+    calendarDays.appendChild(dayEl);
+  }
+}
+
+function createDayElement(day, month, isOtherMonth) {
+  const dayEl = document.createElement('div');
+  dayEl.className = 'day';
+  if (isOtherMonth) dayEl.classList.add('other-month');
+  
+  const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  if (events[dateStr] && events[dateStr].length > 0) {
+    dayEl.classList.add('has-event');
+    dayEl.addEventListener('mouseenter', (e) => showTooltip(e, dateStr));
+    dayEl.addEventListener('mouseleave', hideTooltip);
+  }
+  
+  dayEl.innerHTML = `<div class="day-number">${day}</div>`;
+  dayEl.onclick = () => openEventModal(day, month);
+  
+  return dayEl;
+}
+
+function showTooltip(e, dateStr) {
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  tooltip.id = 'tooltip';
+  tooltip.innerHTML = events[dateStr].map(ev => `<strong>${ev.title}</strong>`).join('<br>');
+  document.body.appendChild(tooltip);
+  
+  const rect = e.target.getBoundingClientRect();
+  tooltip.style.position = 'fixed';
+  tooltip.style.left = rect.left + 'px';
+  tooltip.style.top = (rect.top - tooltip.offsetHeight - 10) + 'px';
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById('tooltip');
+  if (tooltip) tooltip.remove();
+}
+
+// Navigation
+function previousMonth() {
+  currentMonth--;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  renderCalendar();
+}
+
+function nextMonth() {
+  currentMonth++;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  renderCalendar();
+}
+
+// Event Management
+function openEventModal(day, month) {
+  selectedDate = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  document.getElementById('modalDate').textContent = selectedDate;
+  document.getElementById('eventModal').classList.add('active');
+  loadEventsForDate();
+}
+
+function closeModal() {
+  document.getElementById('eventModal').classList.remove('active');
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventDesc').value = '';
+}
+
+function saveEvent() {
+  const title = document.getElementById('eventTitle').value.trim();
+  const desc = document.getElementById('eventDesc').value.trim();
+  
+  if (!title) {
+    alert('Judul event tidak boleh kosong!');
+    return;
+  }
+  
+  if (!events[selectedDate]) events[selectedDate] = [];
+  events[selectedDate].push({ title, desc, id: Date.now() });
+  
+  saveEventsToStorage();
+  loadEventsForDate();
+  renderCalendar();
+  
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventDesc').value = '';
+}
+
+function deleteEvent(eventId) {
+  events[selectedDate] = events[selectedDate].filter(e => e.id !== eventId);
+  if (events[selectedDate].length === 0) delete events[selectedDate];
+  saveEventsToStorage();
+  loadEventsForDate();
+  renderCalendar();
+}
+
+function loadEventsForDate() {
+  const eventList = document.getElementById('eventList');
+  eventList.innerHTML = '';
+  
+  if (events[selectedDate] && events[selectedDate].length > 0) {
+    events[selectedDate].forEach(event => {
+      const eventEl = document.createElement('div');
+      eventEl.className = 'event-item';
+      eventEl.innerHTML = `
+        <h3>${event.title}</h3>
+        <p>${event.desc || 'Tidak ada deskripsi'}</p>
+        <button class="delete-btn" onclick="deleteEvent(${event.id})">🗑️ Hapus</button>
+      `;
+      eventList.appendChild(eventEl);
+    });
+  }
+}
+
+function addTodayEvent() {
+  const today = new Date();
+  openEventModal(today.getDate(), today.getMonth());
+}
+
+// Storage
+function saveEventsToStorage() {
+  localStorage.setItem('calendarEvents', JSON.stringify(events));
+}
+
+function loadEvents() {
+  const stored = localStorage.getItem('calendarEvents');
+  if (stored) events = JSON.parse(stored);
+}
+
+// Export/Import
+function exportCalendar() {
+  const format = prompt('Pilih format ekspor:\n1. JSON\n2. ICS (iCalendar)\n3. CSV\n\nMasukkan 1, 2, atau 3:');
+  
+  if (format === '1') exportJSON();
+  else if (format === '2') exportICS();
+  else if (format === '3') exportCSV();
+}
+
+function exportJSON() {
+  const dataStr = JSON.stringify(events, null, 2);
+  downloadFile(dataStr, 'calendar-export.json', 'application/json');
+}
+
+function exportICS() {
+  let icsContent = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Timeline Calendar//EN\n';
+  
+  Object.keys(events).forEach(date => {
+    events[date].forEach(event => {
+      const dateFormatted = date.replace(/-/g, '');
+      icsContent += `BEGIN:VEVENT\n`;
+      icsContent += `DTSTART:${dateFormatted}\n`;
+      icsContent += `SUMMARY:${event.title}\n`;
+      icsContent += `DESCRIPTION:${event.desc || ''}\n`;
+      icsContent += `END:VEVENT\n`;
+    });
+  });
+  
+  icsContent += 'END:VCALENDAR';
+  downloadFile(icsContent, 'calendar-export.ics', 'text/calendar');
+}
+
+function exportCSV() {
+  let csvContent = 'Tanggal,Judul,Deskripsi\n';
+  
+  Object.keys(events).forEach(date => {
+    events[date].forEach(event => {
+      csvContent += `${date},"${event.title}","${event.desc || ''}"\n`;
+    });
+  });
+  
+  downloadFile(csvContent, 'calendar-export.csv', 'text/csv');
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCalendar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const content = e.target.result;
+    
+    if (file.name.endsWith('.json')) {
+      try {
+        events = JSON.parse(content);
+        saveEventsToStorage();
+        renderCalendar();
+        alert('Import JSON berhasil!');
+      } catch (err) {
+        alert('Format JSON tidak valid!');
+      }
+    } else if (file.name.endsWith('.csv')) {
+      importCSV(content);
+    } else if (file.name.endsWith('.ics')) {
+      importICS(content);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function importCSV(content) {
+  const lines = content.split('\n').slice(1);
+  events = {};
+  
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    const match = line.match(/^([^,]+),"([^"]+)","([^"]*)"/);
+    if (match) {
+      const [, date, title, desc] = match;
+      if (!events[date]) events[date] = [];
+      events[date].push({ title, desc, id: Date.now() + Math.random() });
+    }
+  });
+  
+  saveEventsToStorage();
+  renderCalendar();
+  alert('Import CSV berhasil!');
+}
+
+function importICS(content) {
+  const eventBlocks = content.split('BEGIN:VEVENT').slice(1);
+  events = {};
+  
+  eventBlocks.forEach(block => {
+    const dateMatch = block.match(/DTSTART:(\d{8})/);
+    const titleMatch = block.match(/SUMMARY:([^\n]+)/);
+    const descMatch = block.match(/DESCRIPTION:([^\n]*)/);
+    
+    if (dateMatch && titleMatch) {
+      const dateStr = dateMatch[1];
+      const date = `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`;
+      const title = titleMatch[1].trim();
+      const desc = descMatch ? descMatch[1].trim() : '';
+      
+      if (!events[date]) events[date] = [];
+      events[date].push({ title, desc, id: Date.now() + Math.random() });
+    }
+  });
+  
+  saveEventsToStorage();
+  renderCalendar();
+  alert('Import ICS berhasil!');
+}
+
+// Music Player
+function toggleMusic() {
+  const audio = document.getElementById('bgMusic');
+  const playBtn = document.getElementById('playBtn');
+  
+  if (isPlaying) {
+    audio.pause();
+    playBtn.textContent = '▶';
+    isPlaying = false;
+  } else {
+    audio.play();
+    playBtn.textContent = '⏸';
+    isPlaying = true;
+  }
+}
+
+function changeVolume(value) {
+  const audio = document.getElementById('bgMusic');
+  audio.volume = value / 100;
+}
+
+// Auto-login check
+window.onload = function() {
+  const storedUser = localStorage.getItem('calendarUser');
+  if (storedUser) {
+    document.getElementById('username').value = storedUser;
+  }
+  
+  // Auto-play music (muted initially for browser policy)
+  const audio = document.getElementById('bgMusic');
+  audio.volume = 0.3;
+  audio.play().catch(() => {
+    // Autoplay blocked, user needs to click play
+  });
+};
+</script>
+</body>
+</html>

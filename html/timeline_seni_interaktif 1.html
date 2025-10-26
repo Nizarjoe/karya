@@ -1,0 +1,1227 @@
+<!-- 
+Project: Timeline Kolaboratif Seni - Oktober–November
+Fitur: Login mock, Markdown editor, ekspor/impor (MD, PDF, DOCX, XLSX, ICS)
+Desain: UI modern seperti Notion + Linear + Framer
+Teknologi: TailwindCSS + JS Vanilla + LocalStorage
+Migrasi ke Next.js: pisahkan menjadi komponen (Home, Timeline, Editor, Modal)
+Auth nyata: integrasikan NextAuth.js + Supabase
+-->
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline Proyek Seni: Pementasan Oktober–November</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP CDN for Smooth Motion (Framer Motion style) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Library CDNs for Core Features -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script> <!-- Markdown Parser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <!-- PDF Export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script> <!-- XLSX Export/Import -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script> <!-- File Saver -->
+  <script src="https://cdn.jsdelivr.net/npm/ics-js@3.0.0/dist/ics.min.js"></script> <!-- ICS Export/Import -->
+
+  <style>
+    /* Menggunakan Inter/Poppins seperti yang diminta */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Poppins:wght@100;300;400;600;700&display=swap');
+
+    /* Konfigurasi kustom untuk Glassmorphism dan Animasi */
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.2);
+      --soft-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+      --timeline-line: #A78BFA;
+      /* Primary Purple */
+    }
+
+    /* Scrollbar Halus ala Mac/Notion */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #A78BFA transparent;
+    }
+
+    *::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background-color: #A78BFA;
+      border-radius: 4px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* Efek Glossy Glassmorphism */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: var(--soft-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .glass-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    /* Ripple Effect (Simulasi) */
+    .ripple-effect {
+      position: relative;
+      overflow: hidden;
+      transform: translate3d(0, 0, 0);
+    }
+
+    .ripple-effect:after {
+      content: "";
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+      background-repeat: no-repeat;
+      background-position: 50%;
+      transform: scale(10, 10);
+      opacity: 0;
+      transition: transform 0.6s, opacity 1s;
+    }
+
+    .ripple-effect:active:after {
+      transform: scale(0, 0);
+      opacity: 0.3;
+      transition: 0s;
+    }
+
+    /* Timeline Vertikal */
+    .timeline-container {
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2px;
+      height: 100%;
+      background-color: var(--timeline-line);
+      opacity: 0.2;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 30px;
+      margin-bottom: 40px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -8px;
+      /* Offset dari garis vertikal */
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background-color: var(--timeline-line);
+      border: 4px solid white;
+      /* Cincin luar */
+      z-index: 10;
+    }
+
+    .timeline-item.done::before {
+      background-color: #34D399;
+      /* Green for Selesai */
+    }
+
+    /* Desktop: Vertical Timeline */
+    @media (min-width: 768px) {
+      .timeline-item::before {
+        left: -8px;
+      }
+    }
+
+    /* Mobile: Transformasi menjadi mode horizontal scroll (Simulasi) */
+    @media (max-width: 767px) {
+      .timeline-container {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-left: 0;
+        display: flex;
+      }
+
+      .timeline-container::before {
+        display: none;
+      }
+
+      .timeline-item {
+        display: inline-block;
+        width: 80vw;
+        padding: 1rem;
+        margin-right: 1rem;
+        white-space: normal;
+      }
+
+      .timeline-item::before {
+        display: none;
+        /* Hilangkan titik vertikal di mobile */
+      }
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary-purple': '#A78BFA', // Ungu Muda
+            'soft-gold': '#FCD34D', // Emas Lembut
+            'background-clean': '#F9FAFB', // Putih Bersih
+            'glass-bg': 'rgba(255, 255, 255, 0.3)',
+          },
+          boxShadow: {
+            'soft': 'var(--soft-shadow)',
+            'glass-light': '0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'Poppins', 'sans-serif'],
+          }
+        },
+      }
+    }
+  </script>
+</head>
+
+<body class="font-sans bg-background-clean text-gray-800 antialiased min-h-screen">
+
+  <!-- Konten Utama Aplikasi (Disesuaikan oleh JS) -->
+  <div id="app-container" class="relative">
+
+    <!-- Header Navigasi -->
+    <header id="main-header"
+      class="fixed top-0 left-0 w-full z-50 p-4 backdrop-blur-lg bg-white/70 shadow-sm transition-all duration-300">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <a href="#/home" class="text-xl font-bold tracking-tight text-primary-purple flex items-center">
+          <i data-lucide="sparkles" class="w-6 h-6 mr-2"></i> Pementasan TN
+        </a>
+        <nav class="flex items-center space-x-4">
+          <a href="#/timeline"
+            class="text-sm font-medium hover:text-primary-purple transition hidden sm:block">Timeline</a>
+          <a href="#/export" class="text-sm font-medium hover:text-primary-purple transition hidden sm:block">Ekspor</a>
+          <button id="auth-button"
+            class="glass-card flex items-center space-x-2 py-2 px-3 rounded-xl text-sm font-semibold text-primary-purple hover:bg-white transition duration-300 shadow-glass-light ripple-effect"
+            onclick="App.toggleAuth()">
+            <!-- Avatar / Login text will be here -->
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main View (Rendered Content) -->
+    <main id="view-container" class="pt-20 pb-10 min-h-[90vh]"></main>
+
+    <!-- Footer Minimalis -->
+    <footer class="max-w-7xl mx-auto p-4 text-center text-xs text-gray-500 border-t mt-8">
+      <p>&copy; 2025 Proyek Seni: Pementasan Oktober–November. Ditenagai oleh LLM & Vanilla JS.</p>
+    </footer>
+  </div>
+
+  <!-- Modals -->
+
+  <!-- Modal 1: Login/Auth Mock -->
+  <div id="login-modal"
+    class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/30 backdrop-blur-sm transition-opacity duration-300"
+    aria-modal="true" role="dialog">
+    <div
+      class="glass-card w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-2xl scale-95 opacity-0 transition-all duration-300">
+      <h2 class="text-2xl font-bold mb-4 text-gray-900">Masuk ke Ruang Kolaborasi</h2>
+      <p class="text-sm text-gray-600 mb-6">Gunakan akun mock untuk mengaktifkan mode editor.</p>
+
+      <button onclick="App.mockLogin('google')"
+        class="w-full mb-3 flex items-center justify-center space-x-2 py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ripple-effect">
+        <i data-lucide="chrome" class="w-5 h-5"></i>
+        <span>Login via Google</span>
+      </button>
+      <button onclick="App.mockLogin('github')"
+        class="w-full mb-6 flex items-center justify-center space-x-2 py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ripple-effect">
+        <i data-lucide="github" class="w-5 h-5"></i>
+        <span>Login via GitHub</span>
+      </button>
+
+      <div class="relative mb-6">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-300"></div>
+        </div>
+        <div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-gray-500">Atau dengan
+            Email</span></div>
+      </div>
+
+      <form id="login-form" onsubmit="App.handleLogin(event)">
+        <input type="email" id="login-email" placeholder="email@proyek.com" required
+          class="w-full px-4 py-3 mb-4 rounded-xl border border-gray-300 focus:ring-primary-purple focus:border-primary-purple transition duration-200 bg-white/50"
+          value="user@proyek.com">
+        <input type="password" id="login-password" placeholder="******" required
+          class="w-full px-4 py-3 mb-6 rounded-xl border border-gray-300 focus:ring-primary-purple focus:border-primary-purple transition duration-200 bg-white/50"
+          value="password123">
+
+        <button type="submit"
+          class="w-full bg-primary-purple text-white py-3 rounded-xl font-semibold shadow-lg shadow-primary-purple/40 hover:bg-primary-purple/90 transition duration-300 ripple-effect">
+          Masuk
+        </button>
+      </form>
+
+      <button onclick="App.closeModal('login-modal')"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"><i data-lucide="x"
+          class="w-6 h-6"></i></button>
+    </div>
+  </div>
+
+  <!-- Modal 2: Markdown Editor & History -->
+  <div id="editor-modal"
+    class="fixed inset-0 z-[110] hidden flex items-center justify-center bg-black/30 backdrop-blur-sm transition-opacity duration-300"
+    aria-modal="true" role="dialog">
+    <div
+      class="glass-card w-[95%] max-w-5xl h-[95%] flex flex-col p-4 sm:p-8 rounded-2xl shadow-2xl scale-95 opacity-0 transition-all duration-300">
+
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="editor-title" class="text-2xl font-bold text-primary-purple truncate"></h2>
+        <div class="flex space-x-3">
+          <select id="history-selector"
+            class="px-3 py-1.5 rounded-lg border border-gray-300 text-sm focus:ring-primary-purple focus:border-primary-purple bg-white/70"
+            onchange="App.loadHistoryVersion(this.value)">
+            <!-- Options injected by JS -->
+          </select>
+          <button onclick="App.saveEditedItem()"
+            class="bg-soft-gold text-gray-900 py-1.5 px-3 rounded-xl font-semibold text-sm shadow-md hover:bg-soft-gold/90 transition duration-300 ripple-effect"
+            id="save-editor-btn" disabled>
+            Simpan
+          </button>
+          <button onclick="App.closeModal('editor-modal')" class="text-gray-400 hover:text-gray-700 transition"><i
+              data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row flex-grow overflow-hidden space-y-4 md:space-y-0 md:space-x-4">
+        <!-- Editor (Kiri) -->
+        <div class="md:w-1/2 flex flex-col">
+          <h3 class="text-lg font-semibold mb-2">Editor Markdown</h3>
+          <textarea id="markdown-input"
+            class="flex-grow w-full p-4 rounded-xl border border-gray-300 focus:ring-primary-purple focus:border-primary-purple transition duration-200 font-mono text-sm resize-none bg-white/70"
+            oninput="App.updateLivePreview()"
+            placeholder="Tulis detail kegiatan Anda di sini (mendukung Markdown)..."></textarea>
+        </div>
+        <!-- Preview (Kanan) -->
+        <div class="md:w-1/2 flex flex-col">
+          <h3 class="text-lg font-semibold mb-2">Live Preview</h3>
+          <div id="markdown-preview"
+            class="flex-grow p-4 rounded-xl border border-gray-300 overflow-y-auto bg-white shadow-inner prose prose-purple max-w-none">
+            <p class="text-gray-500 italic">Pratinjau konten Anda akan muncul di sini.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Impor Data -->
+  <div id="import-modal"
+    class="fixed inset-0 z-[120] hidden flex items-center justify-center bg-black/30 backdrop-blur-sm transition-opacity duration-300"
+    aria-modal="true" role="dialog">
+    <div
+      class="glass-card w-full max-w-lg p-6 sm:p-8 rounded-2xl shadow-2xl scale-95 opacity-0 transition-all duration-300">
+      <h2 class="text-2xl font-bold mb-4 text-gray-900">Impor Data Timeline</h2>
+      <p class="text-sm text-gray-600 mb-6">Pilih file (.json, .md, .xlsx, .ics) untuk memperbarui atau menambah data
+        timeline.</p>
+
+      <input type="file" id="import-file-input" accept=".json, .md, .xlsx, .ics" class="w-full mb-6 block text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-primary-purple/10 file:text-primary-purple
+                hover:file:bg-primary-purple/20 transition duration-200
+            ">
+
+      <button onclick="App.handleImport()"
+        class="w-full bg-primary-purple text-white py-3 rounded-xl font-semibold shadow-lg shadow-primary-purple/40 hover:bg-primary-purple/90 transition duration-300 ripple-effect">
+        Proses Impor
+      </button>
+
+      <button onclick="App.closeModal('import-modal')"
+        class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"><i data-lucide="x"
+          class="w-6 h-6"></i></button>
+    </div>
+  </div>
+
+
+  <!-- Toast Notifikasi Container (shadcn/ui style) -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[200] space-y-3">
+    <!-- Notifikasi akan di-inject di sini -->
+  </div>
+
+  <script>
+    // --- LOGIKA APLIKASI UTAMA (VANILLA JS) ---
+
+    const SEED_DATA = [
+      { id: '1', tanggal: "2025-10-20", kegiatan: "Finalisasi naskah & Rilis proposal sponsor", kategori: "Agenda Terdekat", status: "Mendatang", detail: "Rapat final naskah akhir dan penyebaran proposal ke calon sponsor utama. Pastikan naskah sudah disetujui oleh sutradara." },
+      { id: '2', tanggal: "2025-10-24", kegiatan: "Pengajuan kolaborasi MSK BATIK 1", kategori: "Agenda Terdekat", status: "Mendatang", detail: "Pengajuan resmi ke MSK BATIK untuk kolaborasi kostum dan artistik. Perlu disiapkan portofolio visual." },
+      { id: '3', periode: "M1 Oktober", kegiatan: "Penyusunan Kepanitian, Penokohan, Bedah Naskah", kategori: "Persiapan", status: "Selesai", detail: "Pembentukan struktur tim, penetapan aktor, dan sesi intensif bedah naskah. Semua berjalan sesuai rencana." },
+      { id: '4', periode: "M2 Oktober – M3 November", kegiatan: "Latihan", kategori: "Latihan", status: "Mendatang", detail: "Jadwal latihan rutin 4x seminggu. Fokus pada blocking, emosi, dan teknis vokal." },
+      { id: '5', periode: "M4 Oktober", kegiatan: "Workshop", kategori: "Workshop", status: "Mendatang", detail: "Workshop akting dan panggung bersama pelatih profesional." },
+      { id: '6', periode: "M1 November", kegiatan: "Perancangan Artistik", kategori: "Persiapan", status: "Mendatang", detail: "Perancangan set panggung, properti, dan pencahayaan. Tinjau ulang anggaran artistik." },
+      { id: '7', periode: "M4 November", kegiatan: "Pementasan", kategori: "Puncak Acara", status: "Mendatang", detail: "Malam puncak pementasan. Persiapan venue dan publikasi massa." }
+    ];
+
+    const LIBRARY_MAP = {
+      jsPDF: window.jspdf ? window.jspdf.jsPDF : null,
+      XLSX: window.XLSX,
+      ics: window.ics,
+      marked: window.marked,
+      saveAs: window.saveAs,
+    };
+
+    const App = {
+      state: {
+        user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
+        timeline: localStorage.getItem('timeline') ? JSON.parse(localStorage.getItem('timeline')) : SEED_DATA,
+        currentView: window.location.hash.substring(1) || 'home',
+        filter: { search: '', category: 'all', status: 'all' },
+        editingItem: null,
+        // History is stored as an object {itemId: [{timestamp, content}, ...]}
+        history: localStorage.getItem('history') ? JSON.parse(localStorage.getItem('history')) : {},
+      },
+
+      // --- STATE & UTILITY ---
+
+      saveState() {
+        localStorage.setItem('timeline', JSON.stringify(this.state.timeline));
+        localStorage.setItem('user', JSON.stringify(this.state.user));
+        localStorage.setItem('history', JSON.stringify(this.state.history));
+        this.renderTimeline(); // Re-render after save
+        this.showToast('Data disimpan!', 'success');
+      },
+
+      generateId() {
+        return '_' + Math.random().toString(36).substr(2, 9);
+      },
+
+      showToast(message, type = 'info') {
+        const colors = {
+          success: 'bg-green-500',
+          error: 'bg-red-500',
+          info: 'bg-blue-500',
+          warning: 'bg-soft-gold text-gray-900',
+        };
+        const icons = {
+          success: 'CheckCircle',
+          error: 'AlertTriangle',
+          info: 'Info',
+          warning: 'Zap',
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `glass-card p-4 rounded-xl shadow-lg flex items-center space-x-3 text-white transition-all duration-500 transform translate-y-full opacity-0 ${colors[type]}`;
+        toast.innerHTML = `
+                    <i data-lucide="${icons[type]}" class="w-5 h-5"></i>
+                    <p class="text-sm font-medium">${message}</p>
+                `;
+
+        document.getElementById('toast-container').appendChild(toast);
+        lucide.createIcons(); // Render the new icon
+
+        // Animate in
+        gsap.to(toast, {
+          y: 0,
+          opacity: 1,
+          duration: 0.5,
+          ease: "power2.out"
+        });
+
+        // Auto-dismiss
+        setTimeout(() => {
+          gsap.to(toast, {
+            y: 20,
+            opacity: 0,
+            duration: 0.4,
+            ease: "power2.in",
+            onComplete: () => toast.remove()
+          });
+        }, 4000);
+      },
+
+      // --- AUTH MOCK ---
+
+      toggleAuth() {
+        if (this.state.user) {
+          this.state.user = null;
+          this.saveState();
+          this.showToast('Logout Berhasil!', 'info');
+          this.renderAuthButton();
+        } else {
+          this.openModal('login-modal');
+        }
+      },
+
+      mockLogin(provider) {
+        this.showToast(`Login via ${provider} (Mock) berhasil!`, 'success');
+        this.handleLogin(null, 'Guest', 'guest@proyek.com');
+        this.closeModal('login-modal');
+      },
+
+      handleLogin(event, name = 'User', email = 'user@proyek.com') {
+        if (event) event.preventDefault();
+
+        this.state.user = {
+          name: name,
+          email: email,
+          initials: name.split(' ').map(n => n[0]).join('').toUpperCase() || 'P',
+          loggedIn: true
+        };
+
+        this.saveState();
+        this.showToast(`Selamat datang kembali, ${this.state.user.name}!`, 'success');
+        this.closeModal('login-modal');
+        this.renderAuthButton();
+      },
+
+      renderAuthButton() {
+        const btn = document.getElementById('auth-button');
+        if (!btn) return;
+
+        if (this.state.user) {
+          btn.innerHTML = `<span class="w-6 h-6 rounded-full bg-primary-purple text-white flex items-center justify-center font-bold text-xs">${this.state.user.initials}</span> <span>${this.state.user.name}</span>`;
+          btn.classList.remove('text-primary-purple', 'py-2');
+          btn.classList.add('bg-white', 'text-gray-800', 'px-3');
+        } else {
+          btn.innerHTML = `<i data-lucide="log-in" class="w-5 h-5"></i><span>Masuk / Daftar</span>`;
+          btn.classList.remove('bg-white', 'text-gray-800', 'px-3');
+          btn.classList.add('text-primary-purple', 'py-2');
+        }
+        lucide.createIcons();
+      },
+
+      // --- VIEW RENDERING (HASH ROUTING) ---
+
+      renderView() {
+        const hash = window.location.hash.substring(1) || 'home';
+        const container = document.getElementById('view-container');
+        container.innerHTML = '';
+
+        gsap.to(container, {
+          opacity: 0, duration: 0.1, onComplete: () => {
+            switch (hash) {
+              case 'home':
+                container.innerHTML = this.renderHome();
+                this.initHomeAnimations();
+                break;
+              case 'timeline':
+                container.innerHTML = this.renderTimelineView();
+                this.renderTimeline(); // Render actual cards
+                this.initTimelineAnimations();
+                break;
+              default:
+                container.innerHTML = this.renderHome();
+            }
+            lucide.createIcons(); // Render icons in the new view
+            gsap.to(container, { opacity: 1, duration: 0.5 });
+          }
+        });
+      },
+
+      renderHome() {
+        return `
+                    <section id="hero" class="relative overflow-hidden pt-16 pb-24 sm:py-32 bg-gradient-to-br from-white to-primary-purple/10">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tighter text-gray-900 mb-6" data-gsap-target="hero-headline">
+                                Timeline Pementasan <span class="text-primary-purple">Oktober–November</span>
+                            </h1>
+                            <p class="max-w-3xl mx-auto text-xl text-gray-600 mb-10" data-gsap-target="hero-sub">
+                                Platform kolaboratif untuk mengatur, mendokumentasikan, dan menampilkan jadwal seni secara interaktif.
+                                Edit dengan Markdown, ekspor ke PDF, Word, Excel, bahkan kalender — semua langsung di browser.
+                            </p>
+                            <div class="flex justify-center space-x-4" data-gsap-target="hero-cta">
+                                <a href="#/timeline" class="ripple-effect bg-primary-purple text-white text-lg font-semibold px-8 py-3 rounded-full shadow-xl shadow-primary-purple/40 hover:shadow-2xl hover:bg-primary-purple/90 transition duration-300">
+                                    Lihat Timeline
+                                </a>
+                                <button onclick="App.openModal('login-modal')" class="ripple-effect bg-white text-primary-purple text-lg font-semibold px-8 py-3 rounded-full border border-primary-purple/50 shadow-md hover:bg-gray-50 transition duration-300">
+                                    Mulai Login
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                `;
+      },
+
+      initHomeAnimations() {
+        gsap.fromTo('[data-gsap-target="hero-headline"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
+        gsap.fromTo('[data-gsap-target="hero-sub"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, delay: 0.2, ease: "power3.out" });
+        gsap.fromTo('[data-gsap-target="hero-cta"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, delay: 0.4, ease: "power3.out" });
+      },
+
+      renderTimelineView() {
+        const isEditable = !!this.state.user;
+        const editableClass = isEditable ? 'bg-primary-purple/5' : 'bg-gray-100';
+
+        return `
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <h1 class="text-3xl font-bold tracking-tight text-gray-900 mb-8" data-gsap-target="timeline-title">Papan Proyek Interaktif</h1>
+                        
+                        <!-- Agenda Terdekat (Highlight Section) -->
+                        <section id="agenda-terdekat" class="mb-10 p-5 rounded-2xl ${editableClass} border border-soft-gold/50 shadow-soft-gold/30" data-gsap-target="agenda-section">
+                            <h2 class="text-xl font-semibold mb-4 flex items-center text-soft-gold">
+                                <i data-lucide="zap" class="w-5 h-5 mr-2"></i> Agenda Terdekat
+                            </h2>
+                            <div id="agenda-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <!-- Cards Agenda will be injected here -->
+                            </div>
+                        </section>
+
+                        <!-- Kontrol Filter & Pencarian -->
+                        <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-8" data-gsap-target="timeline-controls">
+                            <!-- Pencarian -->
+                            <div class="relative flex-grow">
+                                <i data-lucide="search" class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                                <input type="text" id="search-input" oninput="App.applyFilter()" placeholder="Cari kegiatan, tanggal, atau periode..." class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-primary-purple focus:border-primary-purple transition duration-200 bg-white/70 shadow-sm">
+                            </div>
+                            
+                            <!-- Filter Kategori -->
+                            <select id="filter-category" onchange="App.applyFilter()" class="py-3 px-4 rounded-xl border border-gray-300 focus:ring-primary-purple focus:border-primary-purple transition duration-200 bg-white/70 shadow-sm md:w-48">
+                                <option value="all">Semua Kategori</option>
+                                <option value="Agenda Terdekat">Agenda Terdekat</option>
+                                <option value="Persiapan">Persiapan</option>
+                                <option value="Latihan">Latihan</option>
+                                <option value="Workshop">Workshop</option>
+                                <option value="Puncak Acara">Puncak Acara</option>
+                            </select>
+                            
+                            <!-- Filter Status -->
+                            <select id="filter-status" onchange="App.applyFilter()" class="py-3 px-4 rounded-xl border border-gray-300 focus:ring-primary-purple focus:border-primary-purple transition duration-200 bg-white/70 shadow-sm md:w-48">
+                                <option value="all">Semua Status</option>
+                                <option value="Mendatang">Mendatang</option>
+                                <option value="Selesai">Selesai</option>
+                            </select>
+
+                            <!-- Tombol Aksi -->
+                            <div class="flex space-x-4">
+                                <button onclick="App.addNewItem()" ${isEditable ? '' : 'disabled'} class="ripple-effect py-3 px-4 rounded-xl bg-primary-purple text-white font-semibold text-sm shadow-md hover:bg-primary-purple/90 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                    <i data-lucide="plus" class="w-5 h-5 inline-block mr-1"></i> Baru
+                                </button>
+                                <button onclick="App.openModal('import-modal')" class="ripple-effect py-3 px-4 rounded-xl bg-gray-200 text-gray-800 font-semibold text-sm shadow-md hover:bg-gray-300 transition duration-300">
+                                    <i data-lucide="archive" class="w-5 h-5 inline-block mr-1"></i> Impor
+                                </button>
+                                <div class="relative group">
+                                    <button class="ripple-effect py-3 px-4 rounded-xl bg-gray-200 text-gray-800 font-semibold text-sm shadow-md hover:bg-gray-300 transition duration-300">
+                                        <i data-lucide="download" class="w-5 h-5 inline-block mr-1"></i> Ekspor
+                                    </button>
+                                    ${this.renderExportMenu()}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline Utama -->
+                        <div id="timeline-list" class="timeline-container mt-10">
+                            <!-- Timeline items will be injected here -->
+                        </div>
+                    </div>
+                `;
+      },
+
+      renderExportMenu() {
+        return `
+                    <div class="absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 hidden group-hover:block z-10">
+                        <div class="py-1">
+                            <a href="#" onclick="event.preventDefault(); App.handleExport('markdown')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-purple/10 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-2"></i> .md (Markdown)</a>
+                            <a href="#" onclick="event.preventDefault(); App.handleExport('pdf')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-purple/10 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-2"></i> .pdf (PDF)</a>
+                            <a href="#" onclick="event.preventDefault(); App.handleExport('docx')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-purple/10 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-2"></i> .docx (Word)</a>
+                            <a href="#" onclick="event.preventDefault(); App.handleExport('xlsx')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-purple/10 flex items-center"><i data-lucide="file-text" class="w-4 h-4 mr-2"></i> .xlsx (Excel)</a>
+                            <a href="#" onclick="event.preventDefault(); App.handleExport('ics')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-purple/10 flex items-center"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> .ics (Kalender)</a>
+                        </div>
+                    </div>
+                `;
+      },
+
+      initTimelineAnimations() {
+        gsap.fromTo('[data-gsap-target="timeline-title"]', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
+        gsap.fromTo('[data-gsap-target="agenda-section"]', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, delay: 0.1, ease: "power3.out" });
+        gsap.fromTo('[data-gsap-target="timeline-controls"]', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, delay: 0.2, ease: "power3.out" });
+
+        // Card entry animation
+        gsap.from(".timeline-card", {
+          opacity: 0,
+          y: 20,
+          stagger: 0.1,
+          delay: 0.4,
+          scrollTrigger: {
+            trigger: "#timeline-list",
+            start: "top 80%",
+          }
+        });
+      },
+
+      // --- DATA & CRUD LOGIC ---
+
+      renderTimeline() {
+        const listEl = document.getElementById('timeline-list');
+        const agendaEl = document.getElementById('agenda-cards');
+        if (!listEl || !agendaEl) return;
+
+        const data = this.state.timeline;
+        const filteredData = this.filterData(data);
+
+        listEl.innerHTML = '';
+        agendaEl.innerHTML = '';
+
+        // Sort by date (if available) or simply by index
+        filteredData.sort((a, b) => new Date(a.tanggal || '1970-01-01') - new Date(b.tanggal || '1970-01-01'));
+
+        // Render Timeline Cards
+        filteredData.forEach(item => {
+          const isAgenda = item.kategori === 'Agenda Terdekat' && item.status === 'Mendatang';
+          const dateInfo = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : item.periode || 'TBD';
+          const statusClass = item.status === 'Selesai' ? 'bg-green-100 text-green-700' : 'bg-primary-purple/10 text-primary-purple';
+          const itemClass = item.status === 'Selesai' ? 'done' : 'upcoming';
+
+          const cardHtml = `
+                        <div id="item-${item.id}" class="timeline-item ${itemClass} cursor-pointer">
+                            <div class="timeline-card glass-card p-4 rounded-xl shadow-soft transition-all duration-300" onclick="App.editItem('${item.id}')">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="text-xs font-mono text-gray-500 mb-1">${dateInfo}</p>
+                                        <h3 class="text-lg font-semibold text-gray-900">${item.kegiatan}</h3>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusClass}">
+                                            ${item.status}
+                                        </span>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-2 line-clamp-2">${item.detail || 'Tidak ada detail.'}</p>
+                            </div>
+                        </div>
+                    `;
+          listEl.innerHTML += cardHtml;
+
+          // Render Agenda Cards for Highlight Section
+          if (isAgenda && agendaEl.childElementCount < 4) {
+            agendaEl.innerHTML += `
+                            <div class="p-4 rounded-xl glass-card bg-white/60 shadow-glass-light border-soft-gold/30">
+                                <p class="text-xs font-bold text-soft-gold mb-1">${new Date(item.tanggal).toLocaleDateString('id-ID', { weekday: 'long' })}</p>
+                                <h4 class="text-sm font-semibold text-gray-900">${item.kegiatan}</h4>
+                                <p class="text-xs text-gray-500">${dateInfo}</p>
+                            </div>
+                        `;
+          }
+        });
+
+        lucide.createIcons(); // Re-render icons after DOM update
+      },
+
+      applyFilter() {
+        this.state.filter.search = document.getElementById('search-input').value.toLowerCase();
+        this.state.filter.category = document.getElementById('filter-category').value;
+        this.state.filter.status = document.getElementById('filter-status').value;
+        this.renderTimeline();
+      },
+
+      filterData(data) {
+        const { search, category, status } = this.state.filter;
+
+        return data.filter(item => {
+          const matchesSearch = !search ||
+            item.kegiatan.toLowerCase().includes(search) ||
+            (item.detail && item.detail.toLowerCase().includes(search)) ||
+            (item.periode && item.periode.toLowerCase().includes(search)) ||
+            (item.tanggal && item.tanggal.includes(search));
+
+          const matchesCategory = category === 'all' || item.kategori === category;
+          const matchesStatus = status === 'all' || item.status === status;
+
+          return matchesSearch && matchesCategory && matchesStatus;
+        });
+      },
+
+      addNewItem() {
+        if (!this.state.user) {
+          this.showToast('Login diperlukan untuk menambah kegiatan.', 'error');
+          return;
+        }
+        const newItem = {
+          id: this.generateId(),
+          periode: 'Baru',
+          kegiatan: 'Kegiatan Baru (Klik untuk edit)',
+          kategori: 'Persiapan',
+          status: 'Mendatang',
+          detail: "Tambahkan detail kegiatan di editor Markdown."
+        };
+        this.state.timeline.unshift(newItem); // Tambahkan di depan
+        this.saveState();
+        this.editItem(newItem.id, true);
+      },
+
+      editItem(itemId, isNew = false) {
+        if (!this.state.user) {
+          this.showToast('Anda harus login untuk mengedit item timeline.', 'error');
+          this.openModal('login-modal');
+          return;
+        }
+
+        const item = this.state.timeline.find(i => i.id === itemId);
+        if (!item) return this.showToast('Item tidak ditemukan.', 'error');
+
+        this.state.editingItem = {
+          ...item,
+          originalDetail: item.detail, // Simpan detail asli
+          isNew: isNew,
+        };
+
+        document.getElementById('editor-title').textContent = item.kegiatan;
+        document.getElementById('markdown-input').value = item.detail || '';
+        this.updateLivePreview();
+        this.renderHistorySelector(itemId);
+
+        const saveBtn = document.getElementById('save-editor-btn');
+        saveBtn.disabled = true; // Disable initially
+
+        document.getElementById('markdown-input').oninput = () => {
+          this.updateLivePreview();
+          saveBtn.disabled = (document.getElementById('markdown-input').value === this.state.editingItem.detail);
+        };
+
+        this.openModal('editor-modal');
+      },
+
+      updateLivePreview() {
+        const input = document.getElementById('markdown-input').value;
+        document.getElementById('markdown-preview').innerHTML = this.marked.parse(input);
+      },
+
+      saveEditedItem() {
+        const updatedDetail = document.getElementById('markdown-input').value;
+        const item = this.state.editingItem;
+
+        if (updatedDetail === item.originalDetail) {
+          this.showToast('Tidak ada perubahan untuk disimpan.', 'info');
+          return;
+        }
+
+        // 1. Simpan History (jika ada perubahan)
+        if (!this.state.history[item.id]) {
+          this.state.history[item.id] = [];
+        }
+        // Tambahkan versi lama sebelum ditimpa
+        if (item.originalDetail) {
+          this.state.history[item.id].push({
+            timestamp: new Date().toISOString(),
+            content: item.originalDetail
+          });
+        }
+        // Batasi history ke 5 versi terakhir
+        if (this.state.history[item.id].length > 5) {
+          this.state.history[item.id].shift();
+        }
+
+        // 2. Update Item di Timeline
+        const index = this.state.timeline.findIndex(i => i.id === item.id);
+        if (index !== -1) {
+          this.state.timeline[index].detail = updatedDetail;
+          this.state.editingItem.originalDetail = updatedDetail; // Update original for next edit
+        }
+
+        this.saveState();
+        this.closeModal('editor-modal');
+        this.showToast('Kegiatan berhasil diperbarui!', 'success');
+      },
+
+      renderHistorySelector(itemId) {
+        const selector = document.getElementById('history-selector');
+        const itemHistory = this.state.history[itemId] || [];
+
+        selector.innerHTML = `<option value="">Riwayat Versi (0)</option>`;
+
+        if (itemHistory.length > 0) {
+          selector.innerHTML = `<option value="">Riwayat Versi (${itemHistory.length})</option>`;
+          itemHistory.reverse().forEach((h, index) => { // Tampilkan yang terbaru di atas
+            const time = new Date(h.timestamp).toLocaleString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            selector.innerHTML += `<option value="${h.timestamp}">Versi ${itemHistory.length - index} (${time})</option>`;
+          });
+        }
+      },
+
+      loadHistoryVersion(timestamp) {
+        const selector = document.getElementById('history-selector');
+        const itemId = this.state.editingItem.id;
+        const itemHistory = this.state.history[itemId] || [];
+        const input = document.getElementById('markdown-input');
+
+        if (!timestamp) {
+          input.value = this.state.editingItem.detail;
+          this.updateLivePreview();
+          return;
+        }
+
+        const version = itemHistory.find(h => h.timestamp === timestamp);
+        if (version) {
+          // Update editor content and preview
+          input.value = version.content;
+          this.updateLivePreview();
+          this.showToast('Memuat versi riwayat.', 'info');
+
+          // Disable save if loading history
+          document.getElementById('save-editor-btn').disabled = true;
+        }
+      },
+
+      // --- MODAL UTILITY ---
+
+      openModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        modal.classList.remove('hidden');
+
+        const content = modal.querySelector('.scale-95');
+        gsap.fromTo(modal, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+        gsap.fromTo(content, { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" });
+      },
+
+      closeModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+
+        const content = modal.querySelector('.scale-95');
+        gsap.to(content, { opacity: 0, scale: 0.95, duration: 0.2 });
+        gsap.to(modal, { opacity: 0, duration: 0.3, onComplete: () => modal.classList.add('hidden') });
+
+        // Reset editor state when closed
+        this.state.editingItem = null;
+      },
+
+      // --- EKSPOR FUNGSI ---
+
+      handleExport(format) {
+        const data = this.state.timeline;
+        const filename = `Pementasan-Timeline-${new Date().toISOString().slice(0, 10)}`;
+
+        try {
+          switch (format) {
+            case 'markdown':
+              this.exportToMarkdown(data, filename);
+              break;
+            case 'pdf':
+              this.exportToPDF(data, filename);
+              break;
+            case 'docx':
+              this.exportToDocx(data, filename);
+              break;
+            case 'xlsx':
+              this.exportToXLSX(data, filename);
+              break;
+            case 'ics':
+              this.exportToICS(data, filename);
+              break;
+            default:
+              throw new Error('Format ekspor tidak didukung.');
+          }
+          this.showToast(`Berhasil mengekspor ke ${format.toUpperCase()}!`, 'success');
+        } catch (e) {
+          this.showToast(`Gagal ekspor: ${e.message}`, 'error');
+        }
+      },
+
+      exportToMarkdown(data, filename) {
+        let mdContent = `# Timeline Pementasan Oktober–November\n\n`;
+        data.forEach(item => {
+          const dateInfo = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : item.periode || 'TBD';
+          mdContent += `## ${item.kegiatan}\n`;
+          mdContent += `- **Waktu/Periode:** ${dateInfo}\n`;
+          mdContent += `- **Kategori:** ${item.kategori}\n`;
+          mdContent += `- **Status:** ${item.status}\n`;
+          mdContent += `\n**Detail:**\n\n${item.detail || '*(Tidak ada detail)*'}\n\n---\n\n`;
+        });
+        const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+        LIBRARY_MAP.saveAs(blob, `${filename}.md`);
+      },
+
+      exportToPDF(data, filename) {
+        if (!LIBRARY_MAP.jsPDF) return this.showToast('jsPDF Library tidak dimuat.', 'error');
+        const doc = new LIBRARY_MAP.jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("Timeline Pementasan Oktober–November", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+
+        let y = 30;
+        data.forEach(item => {
+          const dateInfo = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : item.periode || 'TBD';
+
+          if (y > 280) { // Cek halaman
+            doc.addPage();
+            y = 10;
+          }
+
+          doc.setFontSize(12);
+          doc.setTextColor(0);
+          doc.text(`${item.kegiatan} (${dateInfo})`, 14, y += 8);
+
+          doc.setFontSize(10);
+          doc.setTextColor(100);
+          doc.text(`Kategori: ${item.kategori} | Status: ${item.status}`, 14, y += 6);
+
+          // Detail multiline
+          const detailLines = doc.splitTextToSize(item.detail || 'Tidak ada detail.', 180);
+          detailLines.forEach(line => {
+            doc.text(line, 14, y += 5);
+          });
+
+          y += 4;
+          doc.line(14, y, 196, y); // Garis pemisah
+          y += 4;
+        });
+
+        doc.save(`${filename}.pdf`);
+      },
+
+      exportToDocx(data, filename) {
+        // DOCX generation is complex without a robust CDN library.
+        // We will create a basic DOCX file using a clever MIME type trick (HTML -> Word).
+        let content = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Timeline Proyek</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]--><style>body {font-family: Inter, sans-serif;}</style></head><body><h1>Timeline Pementasan Oktober–November</h1>`;
+
+        data.forEach(item => {
+          const dateInfo = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : item.periode || 'TBD';
+          content += `
+                        <div style="margin-bottom: 20px; border-left: 4px solid #A78BFA; padding-left: 10px;">
+                            <h2>${item.kegiatan}</h2>
+                            <p><strong>Waktu:</strong> ${dateInfo}</p>
+                            <p><strong>Kategori:</strong> ${item.kategori}</p>
+                            <p><strong>Status:</strong> ${item.status}</p>
+                            <h3>Detail</h3>
+                            ${this.marked.parse(item.detail || '*(Tidak ada detail)*')}
+                        </div><hr>`;
+        });
+
+        content += '</body></html>';
+
+        const blob = new Blob([content], {
+          type: 'application/msword'
+        });
+        LIBRARY_MAP.saveAs(blob, `${filename}.docx`);
+      },
+
+      exportToXLSX(data, filename) {
+        if (!LIBRARY_MAP.XLSX) return this.showToast('XLSX Library tidak dimuat.', 'error');
+        const wsData = data.map(item => ({
+          'ID': item.id,
+          'Kegiatan': item.kegiatan,
+          'Periode': item.periode || new Date(item.tanggal).toLocaleDateString('id-ID'),
+          'Tanggal Target': item.tanggal || '',
+          'Kategori': item.kategori,
+          'Status': item.status,
+          'Detail': item.detail,
+        }));
+
+        const ws = LIBRARY_MAP.XLSX.utils.json_to_sheet(wsData);
+        const wb = LIBRARY_MAP.XLSX.utils.book_new();
+        LIBRARY_MAP.XLSX.utils.book_append_sheet(wb, ws, "Timeline");
+        LIBRARY_MAP.XLSX.writeFile(wb, `${filename}.xlsx`);
+      },
+
+      exportToICS(data, filename) {
+        if (!LIBRARY_MAP.ics) return this.showToast('ics.js Library tidak dimuat.', 'error');
+        const cal = LIBRARY_MAP.ics();
+        const now = new Date();
+
+        data.filter(item => item.tanggal).forEach(item => {
+          const startDate = new Date(item.tanggal);
+          const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 jam
+
+          cal.addEvent(
+            item.kegiatan,
+            item.detail || 'Detail kegiatan pementasan.',
+            'Ruang Kolaborasi',
+            startDate,
+            endDate
+          );
+        });
+
+        cal.download(filename);
+      },
+
+      // --- IMPOR FUNGSI ---
+
+      handleImport() {
+        const fileInput = document.getElementById('import-file-input');
+        const file = fileInput.files[0];
+
+        if (!file) return this.showToast('Pilih file untuk diimpor.', 'error');
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target.result;
+          const fileName = file.name.toLowerCase();
+          let importedData = [];
+
+          try {
+            if (fileName.endsWith('.json')) {
+              importedData = this.importFromJSON(content);
+            } else if (fileName.endsWith('.md')) {
+              importedData = this.importFromMarkdown(content);
+            } else if (fileName.endsWith('.xlsx')) {
+              importedData = this.importFromXLSX(content);
+            } else if (fileName.endsWith('.ics')) {
+              importedData = this.importFromICS(content);
+            } else {
+              throw new Error('Tipe file tidak didukung untuk impor.');
+            }
+
+            // Menggabungkan data baru dengan data lama
+            const newData = importedData.map(item => ({ ...item, id: this.generateId() }));
+            this.state.timeline = [...this.state.timeline, ...newData];
+
+            this.saveState();
+            this.closeModal('import-modal');
+            this.showToast(`Berhasil mengimpor ${newData.length} item baru!`, 'success');
+
+          } catch (error) {
+            this.showToast(`Gagal memproses impor: ${error.message}`, 'error');
+            console.error('Import Error:', error);
+          }
+        };
+
+        // Untuk XLSX, perlu readAsBinaryString
+        if (fileName.endsWith('.xlsx')) {
+          reader.readAsBinaryString(file);
+        } else {
+          reader.readAsText(file);
+        }
+      },
+
+      importFromJSON(content) {
+        const data = JSON.parse(content);
+        // Simple validation for required fields
+        if (!Array.isArray(data) || data.some(item => !item.kegiatan || !item.kategori)) {
+          throw new Error('Format JSON tidak valid. Pastikan array berisi objek dengan properti "kegiatan" dan "kategori".');
+        }
+        return data;
+      },
+
+      importFromMarkdown(content) {
+        // Crude attempt to extract data from a formatted Markdown list
+        const items = [];
+        const regex = /## (.*?)\s*- \*\*Waktu\/Periode:\*\* (.*?)\s*- \*\*Kategori:\*\* (.*?)\s*- \*\*Status:\*\* (.*?)\s*\*\*Detail:\*\*(.*?)\n\n---/gs;
+        let match;
+
+        while ((match = regex.exec(content)) !== null) {
+          const [fullMatch, kegiatan, periode, kategori, status, detail] = match;
+          items.push({
+            kegiatan: kegiatan.trim(),
+            periode: periode.trim(),
+            kategori: kategori.trim(),
+            status: status.trim(),
+            detail: detail.trim().replace(/\n/g, ' ').trim()
+          });
+        }
+        if (items.length === 0) throw new Error('Tidak dapat menemukan item yang diformat dengan benar dalam file Markdown.');
+        return items;
+      },
+
+      importFromXLSX(content) {
+        if (!LIBRARY_MAP.XLSX) throw new Error('XLSX Library tidak dimuat.');
+
+        const workbook = LIBRARY_MAP.XLSX.read(content, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = LIBRARY_MAP.XLSX.utils.sheet_to_json(worksheet);
+
+        // Mapping kolom Excel ke properti aplikasi
+        return json.map(row => ({
+          kegiatan: row['Kegiatan'] || 'Kegiatan Impor',
+          periode: row['Periode'] || row['Tanggal Target'],
+          tanggal: row['Tanggal Target'] || '',
+          kategori: row['Kategori'] || 'Persiapan',
+          status: row['Status'] || 'Mendatang',
+          detail: row['Detail'] || '',
+        }));
+      },
+
+      importFromICS(content) {
+        // ICS parsing is not directly available via a simple CDN that produces structured JSON.
+        // We will only mock this function or provide a very simple parser.
+        // Since ics.js is mostly for creating, we'll implement a basic VEVENT parser.
+        const items = [];
+        const lines = content.split('\n');
+        let currentItem = null;
+
+        lines.forEach(line => {
+          if (line.trim() === 'BEGIN:VEVENT') {
+            currentItem = {};
+          } else if (line.trim() === 'END:VEVENT' && currentItem) {
+            items.push({
+              kegiatan: currentItem.SUMMARY || 'Kegiatan Kalender Impor',
+              tanggal: currentItem.DTSTART ? currentItem.DTSTART.substring(0, 8) : '', // YYYYMMDD
+              kategori: 'Agenda Terdekat',
+              status: 'Mendatang',
+              detail: currentItem.DESCRIPTION || '',
+            });
+            currentItem = null;
+          } else if (currentItem) {
+            const [key, value] = line.split(':');
+            if (key && value) {
+              currentItem[key.trim()] = value.trim();
+            }
+          }
+        });
+
+        if (items.length === 0) throw new Error('Tidak dapat menemukan VEVENT dalam file ICS.');
+        return items;
+      },
+
+      // --- INISIALISASI ---
+
+      init() {
+        // 1. Inisialisasi marked.js
+        this.marked = LIBRARY_MAP.marked;
+
+        // 2. Setup GSAP ScrollTrigger
+        gsap.registerPlugin(ScrollTrigger);
+
+        // 3. Render Auth State dan Icons
+        this.renderAuthButton();
+        lucide.createIcons();
+
+        // 4. Setup Routing
+        window.addEventListener('hashchange', () => this.renderView());
+        this.renderView(); // Initial render
+
+        // 5. Global Listener for Escape to close modals
+        document.addEventListener('keydown', (e) => {
+          if (e.key === "Escape") {
+            const modals = ['login-modal', 'editor-modal', 'import-modal'];
+            modals.forEach(id => {
+              const modal = document.getElementById(id);
+              if (modal && !modal.classList.contains('hidden')) {
+                this.closeModal(id);
+              }
+            });
+          }
+        });
+
+        this.showToast('Aplikasi siap! Data disimpan di localStorage.', 'info');
+      }
+    };
+
+    // Mulai aplikasi saat DOM dimuat
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+
+</html>

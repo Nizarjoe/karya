@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galaxy Event System - AI-Powered Event Organizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+
+    @keyframes rotate {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 0.8;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+
+    @keyframes glow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+      }
+
+      50% {
+        box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+      }
+    }
+
+    .galaxy-bg {
+      background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.4) 0%, transparent 50%),
+        linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    }
+
+    .orbit {
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      position: absolute;
+      animation: rotate 20s linear infinite;
+    }
+
+    .orbit-1 {
+      width: 300px;
+      height: 300px;
+      top: 50%;
+      left: 50%;
+      margin: -150px 0 0 -150px;
+    }
+
+    .orbit-2 {
+      width: 450px;
+      height: 450px;
+      top: 50%;
+      left: 50%;
+      margin: -225px 0 0 -225px;
+      animation-duration: 30s;
+    }
+
+    .orbit-3 {
+      width: 600px;
+      height: 600px;
+      top: 50%;
+      left: 50%;
+      margin: -300px 0 0 -300px;
+      animation-duration: 40s;
+    }
+
+    .planet {
+      position: absolute;
+      border-radius: 50%;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    .ai-core {
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin: -40px 0 0 -40px;
+      border-radius: 50%;
+      animation: glow 2s ease-in-out infinite;
+      box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+    }
+
+    .creative-planet {
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle, #3b82f6 0%, #1d4ed8 100%);
+      top: 0;
+      left: 50%;
+      margin-left: -20px;
+    }
+
+    .production-planet {
+      width: 35px;
+      height: 35px;
+      background: radial-gradient(circle, #6b7280 0%, #374151 100%);
+      top: 50%;
+      right: 0;
+      margin-top: -17.5px;
+    }
+
+    .finance-planet {
+      width: 45px;
+      height: 45px;
+      background: radial-gradient(circle, #eab308 0%, #ca8a04 100%);
+      bottom: 0;
+      left: 50%;
+      margin-left: -22.5px;
+    }
+
+    .media-planet {
+      width: 38px;
+      height: 38px;
+      background: radial-gradient(circle, #8b5cf6 0%, #7c3aed 100%);
+      top: 50%;
+      left: 0;
+      margin-top: -19px;
+    }
+
+    .evaluation-planet {
+      width: 42px;
+      height: 42px;
+      background: radial-gradient(circle, #06b6d4 0%, #0891b2 100%);
+      top: 25%;
+      right: 25%;
+    }
+
+    .floating-ui {
+      animation: float 4s ease-in-out infinite;
+    }
+
+    .data-stream {
+      position: absolute;
+      width: 2px;
+      height: 100px;
+      background: linear-gradient(to bottom, transparent, #3b82f6, transparent);
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .holographic-card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+
+<body class="h-full galaxy-bg text-white overflow-x-hidden">
+  <!-- Navigation -->
+  <nav class="fixed top-0 w-full z-50 bg-slate-900/20 backdrop-blur-md border-b border-blue-500/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+          <span
+            class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Galaxy
+            Event System</span>
+        </div>
+        <div class="hidden md:flex space-x-8">
+          <a href="#home" class="hover:text-blue-400 transition-colors">Beranda</a>
+          <a href="#system" class="hover:text-blue-400 transition-colors">Sistem</a>
+          <a href="#divisions" class="hover:text-blue-400 transition-colors">Divisi</a>
+          <a href="#timeline" class="hover:text-blue-400 transition-colors">Timeline</a>
+          <a href="#dashboard" class="hover:text-blue-400 transition-colors">Dashboard</a>
+        </div>
+        <button class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section id="home" class="min-h-full flex items-center justify-center relative overflow-hidden">
+    <!-- Galaxy Visualization -->
+    <div class="absolute inset-0 flex items-center justify-center">
+      <!-- AI Core (Sun) -->
+      <div class="ai-core"></div>
+
+      <!-- Orbit Rings -->
+      <div class="orbit orbit-1">
+        <div class="planet creative-planet"></div>
+      </div>
+      <div class="orbit orbit-2">
+        <div class="planet production-planet"></div>
+        <div class="planet media-planet"></div>
+      </div>
+      <div class="orbit orbit-3">
+        <div class="planet finance-planet"></div>
+        <div class="planet evaluation-planet"></div>
+      </div>
+
+      <!-- Data Streams -->
+      <div class="data-stream" style="top: 20%; left: 30%;"></div>
+      <div class="data-stream" style="top: 60%; right: 25%; animation-delay: 1s;"></div>
+      <div class="data-stream" style="bottom: 30%; left: 60%; animation-delay: 2s;"></div>
+    </div>
+
+    <!-- Hero Content -->
+    <div class="relative z-10 text-center max-w-4xl mx-auto px-4">
+      <h1
+        class="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent floating-ui">
+        Galaxy Event System
+      </h1>
+      <p class="text-xl md:text-2xl mb-8 text-gray-300 floating-ui" style="animation-delay: 0.5s;">
+        Sistem AI-Powered Event Organizer yang Revolusioner
+      </p>
+      <p class="text-lg mb-12 text-gray-400 max-w-2xl mx-auto floating-ui" style="animation-delay: 1s;">
+        Mengelola event dengan teknologi galaksi masa depan. Setiap divisi adalah planet yang berputar dalam harmoni
+        sempurna di sekitar AI Core yang cerdas.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center floating-ui" style="animation-delay: 1.5s;">
+        <button onclick="scrollToSection('system')"
+          class="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 font-semibold">
+          Jelajahi Sistem
+        </button>
+        <button onclick="scrollToSection('dashboard')"
+          class="px-8 py-4 border-2 border-blue-500 rounded-full hover:bg-blue-500/20 transition-all transform hover:scale-105 font-semibold">
+          Lihat Dashboard
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- System Overview -->
+  <section id="system" class="min-h-full py-20 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2
+          class="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+          AI Core System
+        </h2>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+          Pusat kendali cerdas yang mengatur seluruh ekosistem event organizer dengan teknologi AI terdepan
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="holographic-card rounded-2xl p-8">
+          <h3 class="text-2xl font-bold mb-6 text-blue-400">Fitur AI Core</h3>
+          <div class="space-y-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span>Prediksi dan analisis risiko real-time</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+              <span>Optimasi resource allocation otomatis</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <div class="w-3 h-3 bg-cyan-500 rounded-full"></div>
+              <span>Monitoring performa multi-divisi</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span>Escalation management cerdas</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <div class="w-64 h-64 mx-auto relative">
+            <div class="ai-core w-32 h-32 mx-auto"></div>
+            <div class="absolute inset-0 border-2 border-blue-500/30 rounded-full animate-spin"
+              style="animation-duration: 10s;"></div>
+            <div class="absolute inset-4 border-2 border-purple-500/30 rounded-full animate-spin"
+              style="animation-duration: 15s; animation-direction: reverse;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Divisions -->
+  <section id="divisions" class="min-h-full py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2
+          class="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          Planet Divisi
+        </h2>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+          Setiap divisi adalah planet unik dengan karakteristik dan fungsi khusus dalam galaksi event organizer
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Creative Division -->
+        <div class="holographic-card rounded-2xl p-6 hover:border-blue-500/50 transition-all transform hover:scale-105">
+          <div
+            class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z">
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-center mb-3 text-blue-400">Creative Planet</h3>
+          <p class="text-gray-300 text-center mb-4">Pusat kreativitas dan inovasi konsep event</p>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>• Concept Development</li>
+            <li>• Visual Design</li>
+            <li>• Content Creation</li>
+            <li>• Brand Strategy</li>
+          </ul>
+        </div>
+
+        <!-- Production Division -->
+        <div class="holographic-card rounded-2xl p-6 hover:border-gray-500/50 transition-all transform hover:scale-105">
+          <div
+            class="w-16 h-16 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+              </path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-center mb-3 text-gray-400">Production Planet</h3>
+          <p class="text-gray-300 text-center mb-4">Eksekusi teknis dan operasional event</p>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>• Technical Setup</li>
+            <li>• Vendor Management</li>
+            <li>• Logistics Coordination</li>
+            <li>• Quality Control</li>
+          </ul>
+        </div>
+
+        <!-- Finance Division -->
+        <div
+          class="holographic-card rounded-2xl p-6 hover:border-yellow-500/50 transition-all transform hover:scale-105">
+          <div
+            class="w-16 h-16 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1">
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-center mb-3 text-yellow-400">Finance Planet</h3>
+          <p class="text-gray-300 text-center mb-4">Pengelolaan keuangan dan investasi</p>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>• Budget Planning</li>
+            <li>• Cost Control</li>
+            <li>• ROI Analysis</li>
+            <li>• Financial Reporting</li>
+          </ul>
+        </div>
+
+        <!-- Media Division -->
+        <div
+          class="holographic-card rounded-2xl p-6 hover:border-purple-500/50 transition-all transform hover:scale-105">
+          <div
+            class="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-center mb-3 text-purple-400">Media Planet</h3>
+          <p class="text-gray-300 text-center mb-4">Dokumentasi dan promosi event</p>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>• Content Production</li>
+            <li>• Social Media</li>
+            <li>• Live Streaming</li>
+            <li>• Photography</li>
+          </ul>
+        </div>
+
+        <!-- Evaluation Division -->
+        <div class="holographic-card rounded-2xl p-6 hover:border-cyan-500/50 transition-all transform hover:scale-105">
+          <div
+            class="w-16 h-16 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-center mb-3 text-cyan-400">Evaluation Planet</h3>
+          <p class="text-gray-300 text-center mb-4">Analisis dan perbaikan berkelanjutan</p>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>• Performance Analysis</li>
+            <li>• Feedback Collection</li>
+            <li>• KPI Monitoring</li>
+            <li>• Improvement Plans</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section id="timeline" class="min-h-full py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2
+          class="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+          Timeline Orbit
+        </h2>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+          Perjalanan waktu event dalam orbit galaksi yang terstruktur dan terprediksi
+        </p>
+      </div>
+
+      <div class="relative">
+        <div class="flex flex-col md:flex-row justify-between items-center space-y-8 md:space-y-0 md:space-x-4">
+          <!-- H-90 -->
+          <div class="holographic-card rounded-xl p-6 text-center w-full md:w-48">
+            <div class="w-12 h-12 bg-red-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+              <span class="text-white font-bold">H-90</span>
+            </div>
+            <h4 class="font-bold mb-2">Konsep</h4>
+            <p class="text-sm text-gray-400">Ideation & Planning</p>
+          </div>
+
+          <!-- H-60 -->
+          <div class="holographic-card rounded-xl p-6 text-center w-full md:w-48">
+            <div class="w-12 h-12 bg-orange-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+              <span class="text-white font-bold">H-60</span>
+            </div>
+            <h4 class="font-bold mb-2">Persiapan</h4>
+            <p class="text-sm text-gray-400">Resource Allocation</p>
+          </div>
+
+          <!-- H-30 -->
+          <div class="holographic-card rounded-xl p-6 text-center w-full md:w-48">
+            <div class="w-12 h-12 bg-yellow-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+              <span class="text-white font-bold">H-30</span>
+            </div>
+            <h4 class="font-bold mb-2">Produksi</h4>
+            <p class="text-sm text-gray-400">Content & Setup</p>
+          </div>
+
+          <!-- H-7 -->
+          <div class="holographic-card rounded-xl p-6 text-center w-full md:w-48">
+            <div class="w-12 h-12 bg-blue-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+              <span class="text-white font-bold">H-7</span>
+            </div>
+            <h4 class="font-bold mb-2">Final Check</h4>
+            <p class="text-sm text-gray-400">Quality Assurance</p>
+          </div>
+
+          <!-- H -->
+          <div class="holographic-card rounded-xl p-6 text-center w-full md:w-48 border-2 border-green-500">
+            <div
+              class="w-12 h-12 bg-green-500 rounded-full mx-auto mb-3 flex items-center justify-center animate-pulse">
+              <span class="text-white font-bold">H</span>
+            </div>
+            <h4 class="font-bold mb-2 text-green-400">Event Day</h4>
+            <p class="text-sm text-gray-400">Execution</p>
+          </div>
+
+          <!-- H+7 -->
+          <div class="holographic-card rounded-xl p-6 text-center w-full md:w-48">
+            <div class="w-12 h-12 bg-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+              <span class="text-white font-bold">H+7</span>
+            </div>
+            <h4 class="font-bold mb-2">Evaluasi</h4>
+            <p class="text-sm text-gray-400">Analysis & Report</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="min-h-full py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2
+          class="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+          Command Console
+        </h2>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+          Dashboard holografik untuk monitoring dan kontrol seluruh sistem galaksi
+        </p>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <!-- KPI Cards -->
+        <div class="lg:col-span-2 grid md:grid-cols-2 gap-6">
+          <div class="holographic-card rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Event Success Rate</h3>
+              <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+            <div class="text-3xl font-bold text-green-400 mb-2">98.5%</div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-green-500 h-2 rounded-full" style="width: 98.5%"></div>
+            </div>
+          </div>
+
+          <div class="holographic-card rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Budget Efficiency</h3>
+              <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            </div>
+            <div class="text-3xl font-bold text-blue-400 mb-2">94.2%</div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-blue-500 h-2 rounded-full" style="width: 94.2%"></div>
+            </div>
+          </div>
+
+          <div class="holographic-card rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Team Performance</h3>
+              <div class="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+            </div>
+            <div class="text-3xl font-bold text-purple-400 mb-2">96.8%</div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-purple-500 h-2 rounded-full" style="width: 96.8%"></div>
+            </div>
+          </div>
+
+          <div class="holographic-card rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Client Satisfaction</h3>
+              <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+            </div>
+            <div class="text-3xl font-bold text-yellow-400 mb-2">97.3%</div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-yellow-500 h-2 rounded-full" style="width: 97.3%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="holographic-card rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+            AI Assistant
+          </h3>
+          <div class="space-y-3 mb-4 h-64 overflow-y-auto">
+            <div class="bg-blue-500/20 rounded-lg p-3">
+              <p class="text-sm">🤖 Event "Tech Summit 2024" berjalan optimal. Semua sistem normal.</p>
+            </div>
+            <div class="bg-yellow-500/20 rounded-lg p-3">
+              <p class="text-sm">⚠️ Deteksi potensi delay pada vendor catering. Rekomendasi: aktivasi backup plan.</p>
+            </div>
+            <div class="bg-green-500/20 rounded-lg p-3">
+              <p class="text-sm">✅ Budget optimization berhasil menghemat 12% dari alokasi awal.</p>
+            </div>
+          </div>
+          <div class="flex">
+            <input type="text" placeholder="Tanya AI Assistant..."
+              class="flex-1 bg-gray-800 border border-gray-600 rounded-l-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+            <button class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-r-lg transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900/50 border-t border-blue-500/20 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <div class="flex items-center justify-center space-x-2 mb-4">
+          <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+          <span
+            class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Galaxy
+            Event System</span>
+        </div>
+        <p class="text-gray-400 mb-6">Masa depan event organizer dimulai dari sini</p>
+        <div class="flex justify-center space-x-6">
+          <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">Tentang</a>
+          <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">Kontak</a>
+          <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">Dokumentasi</a>
+          <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">Support</a>
+        </div>
+        <div class="mt-8 pt-8 border-t border-gray-700">
+          <p class="text-gray-500 text-sm">&copy; 2024 Galaxy Event System. Semua hak dilindungi.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function scrollToSection(sectionId) {
+      document.getElementById(sectionId).scrollIntoView({
+        behavior: 'smooth'
+      });
+    }
+
+    // Add smooth scrolling for navigation links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
+
+    // Add interactive hover effects to planets
+    document.querySelectorAll('.planet').forEach(planet => {
+      planet.addEventListener('mouseenter', function () {
+        this.style.transform = 'scale(1.2)';
+        this.style.transition = 'transform 0.3s ease';
+      });
+
+      planet.addEventListener('mouseleave', function () {
+        this.style.transform = 'scale(1)';
+      });
+    });
+
+    // Simulate AI chat functionality
+    const chatInput = document.querySelector('input[placeholder="Tanya AI Assistant..."]');
+    const chatButton = chatInput?.nextElementSibling;
+
+    if (chatButton) {
+      chatButton.addEventListener('click', function () {
+        const message = chatInput.value.trim();
+        if (message) {
+          // Add user message
+          const chatContainer = document.querySelector('.space-y-3');
+          const userMessage = document.createElement('div');
+          userMessage.className = 'bg-gray-600/20 rounded-lg p-3 ml-8';
+          userMessage.innerHTML = `<p class="text-sm">👤 ${message}</p>`;
+          chatContainer.appendChild(userMessage);
+
+          // Clear input
+          chatInput.value = '';
+
+          // Simulate AI response
+          setTimeout(() => {
+            const aiResponse = document.createElement('div');
+            aiResponse.className = 'bg-blue-500/20 rounded-lg p-3';
+            aiResponse.innerHTML = `<p class="text-sm">🤖 Terima kasih atas pertanyaan Anda. Sistem AI sedang menganalisis data untuk memberikan respons terbaik.</p>`;
+            chatContainer.appendChild(aiResponse);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }, 1000);
+
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      });
+
+      chatInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          chatButton.click();
+        }
+      });
+    }
+  </script>
+  <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'994bcd66656f89a1',t:'MTc2MTUwMTA5My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>

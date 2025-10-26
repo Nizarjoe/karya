@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<!--
+NOTION CLONE — EVENT ORGANIZER EDITION
+======================================
+🔥 Fitur:
+- Editor blok mirip Notion (paragraf, heading, quote, todo, list, numbered, code, image, divider)
+- Kalender interaktif (monthly) yang sinkron dengan halaman
+- Asisten AI simulasi (offline) dengan efek mengetik
+- Penyimpanan offline otomatis di localStorage + backup otomatis ke localStorage.calendarBackup
+- Sidebar dinamis: tambah/hapus/rename halaman, pencarian instan
+- Drag & drop blok (urut), drag & drop event antar tanggal
+- Export / Import (JSON)
+- Tema: Dark (default) + Light + pilihan warna/logo
+- Shortcut: Ctrl+S (simpan), Ctrl+K (cari halaman), / (tampilkan menu blok)
+
+PETUNJUK PENTING:
+1. Bagian tema diatur oleh CSS variables pada :root (di bagian top CSS).
+   - Ubah warna di :root{} dan [data-theme="..."] blocks.
+2. Logo dapat diganti di Settings (pilih logo yang tersedia).
+3. Struktur data di localStorage:
+   key: "eo_data" => {
+     version: "1.0",
+     user: "Nama",
+     activePageId: "p1",
+     pages: [
+       {
+         id: "p1",
+         title: "Event Musik Oktober",
+         icon: "🎵",
+         blocks: [
+           { id:"b1", type:"heading1", content:"Rundown Acara" },
+           { id:"b2", type:"todo", content:"Cek sound system", checked:false }
+         ],
+         events: [
+           { id:"e1", date:"2025-10-24", time:"18:00", title:"Briefing kru", color:"#7C3AED", desc:"..." }
+         ]
+       }
+     ],
+     settings: { theme: "dark", logo: "neon", showHints:true }
+   }
+4. Backup: every save also writes to localStorage.calendarBackup with timestamp.
+5. File works local (file://) and on GitHub Pages (no external requests).
+
+PASTIKAN semua fitur terintegrasi halus. Sekarang: satu file HTML siap pakai.
+-->
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EO Notion - Event Organizer Pro (Single File)</title>
+<style>
+/* =========================================================
+   THEME VARIABLES - ubah di sini untuk setting warna utama
+   ========================================================= */
+:root{
+  --bg-grad-1:#0E1015; /* background gradient start */
+  --bg-grad-2:#1C1F26; /* background gradient end */
+  --accent:#7C3AED;    /* neon purple */
+  --accent-2:#00E0FF;  /* cyanish */
+  --muted:#A0A8B6;
+  --text:#E2E8F0;
+  --glass: rgba(255,255,255,0.04);
+  --card:#111217;
+  --radius:12px;
+  --transition:0.25s;
+  --shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+
+/* Light overrides */
+[data-theme="light"]{
+  --bg-grad-1:#F6F7FB;
+  --bg-grad-2:#FFFFFF;
+  --accent:#4F46E5;
+  --accent-2:#06B6D4;
+  --muted:#475569;
+  --text:#0F172A;
+  --glass: rgba(0,0,0,0.03);
+  --card:#FFFFFF;
+  --shadow: 0 6px 18px rgba(16,24,40,0.08);
+}
+
+/* STYLES (minified-ish but commented) */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color:var(--text);
+  background:linear-gradient(160deg,var(--bg-grad-1),var(--bg-grad-2));
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow:hidden;
+}
+
+/* App container */
+#app{
+  display:flex;
+  height:100vh;
+  gap:18px;
+  padding:22px;
+  align-items:stretch;
+  transition:background var(--transition);
+}
+
+/* Sidebar */
+#sidebar{
+  width:260px;
+  min-width:200px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-radius:var(--radius);
+  padding:12px;
+  box-shadow:var(--shadow);
+  backdrop-filter: blur(8px) saturate(1.1);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* Logo area */
+#logo-area{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px;
+}
+.logo-svg{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.app-title{font-weight:700;font-size:14px}
+.app-sub{font-size:11px;color:var(--muted)}
+
+/* Search */
+#page-search{
+  width:100%;
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.04);
+  background:transparent;
+  color:var(--text);
+}
+
+/* Pages list */
+#pages-list{flex:1;overflow:auto;padding-right:6px}
+.page-item{
+  padding:8px 10px;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  transition:all var(--transition);
+}
+.page-item:hover{transform:translateX(6px);background:var(--glass)}
+.page-item.active{background:linear-gradient(90deg, rgba(124,58,237,0.14), rgba(0,224,255,0.06));box-shadow:0 4px 14px rgba(124,58,237,0.06)}
+
+/* Footer of sidebar */
+#sidebar-footer{display:flex;gap:8px;align-items:center;justify-content:space-between}
+#add-page{padding:8px;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#fff;font-weight:600;cursor:pointer}
+
+/* Main content area */
+#main {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-width:0;
+}
+
+/* Top toolbar */
+#toolbar{
+  height:64px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-radius:var(--radius);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  box-shadow:var(--shadow);
+  backdrop-filter: blur(6px);
+}
+
+/* Toolbar elements */
+.toolbar-left{display:flex;gap:8px;align-items:center}
+.button{
+  padding:8px 12px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text);cursor:pointer;
+  transition:transform var(--transition), background var(--transition);
+}
+.button:hover{transform:translateY(-3px);background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))}
+
+/* Body split: editor + calendar */
+#workspace{
+  display:flex;
+  gap:18px;
+  align-items:stretch;
+  min-height:0; /* so children can overflow */
+}
+
+/* Editor pane */
+#editor{
+  flex:1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:var(--radius);
+  padding:18px;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  overflow:auto;
+  box-shadow:var(--shadow);
+}
+
+/* Page title */
+#page-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+#page-title{
+  font-size:20px;font-weight:700;background:transparent;border:none;color:var(--text);
+}
+.page-meta{color:var(--muted);font-size:12px}
+
+/* Blocks area */
+#blocks{display:flex;flex-direction:column;gap:10px}
+.block{
+  padding:12px;border-radius:10px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);
+  transition:all var(--transition);
+}
+.block[draggable="true"]{cursor:grab}
+.block:active{cursor:grabbing;opacity:0.95;transform:scale(0.995)}
+
+/* Block types */
+.block .content{min-height:20px;outline:none}
+.block .meta{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* Small helpers */
+.small{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center}
+
+/* Calendar pane */
+#calendar{
+  width:420px;
+  min-width:320px;
+  max-width:460px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-radius:var(--radius);
+  padding:12px;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* Calendar header */
+.cal-head{display:flex;align-items:center;justify-content:space-between}
+.cal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+}
+.cal-cell{
+  background:var(--card);
+  border-radius:8px;
+  padding:8px;
+  min-height:70px;
+  position:relative;
+  cursor:pointer;
+  transition:transform var(--transition), box-shadow var(--transition);
+}
+.cal-cell:hover{transform:translateY(-4px)}
+.cal-date{font-size:12px;color:var(--muted)}
+.cal-today{box-shadow:0 0 0 2px rgba(124,58,237,0.18) inset}
+
+/* Event pill */
+.event-pill{
+  display:block;padding:4px 6px;border-radius:6px;color:#fff;font-size:12px;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* Modal overlay */
+.modal{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,6,10,0.5);z-index:9999;
+}
+.modal .dialog{width:min(720px,95%);background:var(--card);padding:18px;border-radius:12px;box-shadow:var(--shadow)}
+
+/* Input styles */
+input[type="text"], input[type="time"], input[type="date"], input[type="datetime-local"], textarea, select{
+  width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)
+}
+
+/* AI chat popup */
+#ai-chat{
+  position:fixed;right:22px;bottom:22px;width:320px;background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.25));border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow);
+  transform:translateY(20px);opacity:0;transition:all .25s;pointer-events:none;z-index:9998;
+}
+#ai-chat.open{transform:translateY(0);opacity:1;pointer-events:auto}
+.ai-messages{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:6px}
+.ai-bubble{max-width:80%;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);color:var(--text)}
+.ai-bubble.ai{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#07070a;align-self:flex-start}
+.ai-bubble.user{background:rgba(255,255,255,0.04);align-self:flex-end}
+
+/* Small responsive */
+@media (max-width:1000px){ #sidebar{display:none} #calendar{display:none} #editor{flex:1 1 100%} }
+</style>
+</head>
+<body>
+<div id="app" role="application" aria-label="Event Organizer Notion-style">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" aria-label="Sidebar">
+    <div id="logo-area">
+      <div class="logo-svg" id="logo-display" title="Logo"></div>
+      <div>
+        <div class="app-title">EO Notion</div>
+        <div class="app-sub">Event Organizer Pro</div>
+      </div>
+    </div>
+
+    <input id="page-search" placeholder="Cari halaman (Ctrl+K)" aria-label="Cari halaman" />
+
+    <div id="pages-list" role="list" aria-label="Daftar halaman">
+      <!-- pages injected here -->
+    </div>
+
+    <div id="sidebar-footer">
+      <button id="add-page" class="button" aria-label="Tambah halaman">+ Tambah Halaman</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="import-btn" class="button" title="Import JSON">↪</button>
+        <button id="export-btn" class="button" title="Export JSON">⇪</button>
+        <button id="settings-btn" class="button" title="Settings">⚙️</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main" role="main">
+    <div id="toolbar" role="toolbar" aria-label="Toolbar">
+      <div class="toolbar-left">
+        <button id="btn-add-block" class="button">+ Block</button>
+        <button id="btn-new-event" class="button">+ Event</button>
+        <button id="btn-ai" class="button">AI Assistant</button>
+        <div class="small" style="margin-left:10px">Theme:
+          <select id="theme-select" style="margin-left:6px;background:transparent;border:none;color:var(--text)">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-left:auto" class="small">Autosave • Local only • Backup otomatis</div>
+    </div>
+
+    <div id="workspace">
+      <!-- EDITOR -->
+      <section id="editor" aria-label="Editor">
+        <div id="page-head">
+          <input id="page-title" value="Untitled Page" aria-label="Judul halaman" />
+          <div class="page-meta" id="page-meta">—</div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <button id="btn-export-page" class="button small">Export Page</button>
+            <button id="btn-delete-page" class="button small">Hapus</button>
+          </div>
+        </div>
+
+        <div id="blocks" tabindex="0" aria-label="Editor blocks">
+          <!-- blocks injected here -->
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button id="btn-add-block-bottom" class="button">+ Add Block</button>
+          <button id="btn-markdown" class="button">Export Markdown</button>
+        </div>
+      </section>
+
+      <!-- CALENDAR -->
+      <aside id="calendar" aria-label="Calendar">
+        <div class="cal-head">
+          <div>
+            <div id="cal-month" style="font-weight:700"></div>
+            <div class="small" id="cal-sub">Today highlighted</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button id="cal-prev" class="button">◀</button>
+            <button id="cal-next" class="button">▶</button>
+            <select id="cal-mode" class="button" aria-label="Mode kalender">
+              <option value="month">Month</option>
+              <option value="week">Week</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cal-grid" id="cal-grid" aria-label="Calendar grid">
+          <!-- cells injected -->
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <button id="btn-today" class="button">Today</button>
+          <div class="small" style="margin-left:auto">Drag event untuk pindah tanggal</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="modal-event" class="modal" role="dialog" aria-modal="true">
+  <div class="dialog">
+    <h3 id="ev-title">Tambah / Edit Event</h3>
+    <div style="display:grid;gap:8px">
+      <input type="text" id="ev-name" placeholder="Nama event" />
+      <div style="display:flex;gap:8px">
+        <input type="date" id="ev-date" />
+        <input type="time" id="ev-time" />
+        <input type="color" id="ev-color" value="#7C3AED" title="Color" />
+      </div>
+      <textarea id="ev-desc" rows="4" placeholder="Deskripsi..."></textarea>
+      <div style="display:flex;gap:8px">
+        <button id="ev-save" class="button">Simpan</button>
+        <button id="ev-cancel" class="button">Batal</button>
+        <button id="ev-delete" class="button" style="margin-left:auto;background:rgba(255,60,60,0.14)">Hapus</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-settings" class="modal" role="dialog" aria-modal="true">
+  <div class="dialog">
+    <h3>Settings</h3>
+    <div style="display:grid;gap:8px">
+      <label>Logo pilihan:</label>
+      <div style="display:flex;gap:8px">
+        <button class="button logo-choice" data-logo="n">N Minimalist</button>
+        <button class="button logo-choice" data-logo="neon">Neon Pulse</button>
+        <button class="button logo-choice" data-logo="sphere">Gradient Sphere</button>
+        <button class="button logo-choice" data-logo="ai">AI Motion</button>
+      </div>
+      <label>Theme:</label>
+      <select id="settings-theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+      <div style="display:flex;gap:8px">
+        <button id="btn-reset" class="button" style="background:rgba(255,60,60,0.14)">Reset App</button>
+        <button id="btn-close-settings" class="button" style="margin-left:auto">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Chat -->
+<div id="ai-chat" aria-live="polite">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <strong>AI Assistant</strong><button id="ai-close" class="button">✕</button>
+  </div>
+  <div class="ai-messages" id="ai-messages"></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input id="ai-input" type="text" placeholder="Tanyakan pada AI (contoh: buat rundown)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04)" />
+    <button id="ai-send" class="button">Kirim</button>
+  </div>
+</div>
+
+<!-- Tiny file input for import -->
+<input id="file-input" type="file" style="display:none" accept=".json"/>
+
+<script>
+/* =========================================================
+   APP LOGIC (IIFE Modular)
+   Sections:
+   - Utils
+   - Storage Engine (autosave + backup)
+   - Sidebar Logic
+   - Editor Engine (blocks CRUD + drag/drop)
+   - Calendar Renderer (month mode + event sync + drag/drop)
+   - Modals (event modal, settings)
+   - AI Assistant (offline simulated)
+   - Export / Import
+   - Shortcuts & Initialization
+   ========================================================= */
+
+(() => {
+  // ======================
+  // Utils
+  // ======================
+  const qs = s=>document.querySelector(s);
+  const qsa = s=>Array.from(document.querySelectorAll(s));
+  const el = (tag, attrs={}, ...children)=>{
+    const e = document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v])=>{
+      if(k==='class') e.className = v;
+      else if(k==='html') e.innerHTML = v;
+      else e.setAttribute(k,v);
+    });
+    children.forEach(c=>{ if(typeof c === 'string') e.appendChild(document.createTextNode(c)); else if(c) e.appendChild(c); });
+    return e;
+  };
+  const uid = (p='id')=> (p+'_'+Math.random().toString(36).slice(2,9));
+  const todayKey = (d=new Date())=> d.toISOString().split('T')[0];
+
+  // ======================
+  // Defaults & State
+  // ======================
+  const STORAGE_KEY = 'eo_data';
+  const BACKUP_KEY = 'calendarBackup';
+  let state = {
+    version: "1.0",
+    user: "Guest",
+    activePageId: null,
+    pages: [],
+    settings: { theme:'dark', logo:'n' }
+  };
+  let autoSaveTimer = null;
+
+  // ======================
+  // Storage Engine
+  // ======================
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ state = JSON.parse(raw); }
+      else {
+        // init sample page
+        const p = createPage('Event Musik Oktober', '🎵');
+        p.blocks.push({ id: uid('b'), type:'heading1', content:'Rundown Acara' });
+        p.blocks.push({ id: uid('b'), type:'todo', content:'Cek sound system', checked:false });
+        p.events.push({ id: uid('e'), date: '2025-10-24', time:'18:00', title:'Briefing kru', color:'#7C3AED', desc:'Briefing untuk kru teknis' });
+        state.pages.push(p);
+        state.activePageId = p.id;
+        saveState();
+      }
+    }catch(e){
+      console.error('Load error', e);
+    }
+  }
+
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      // backup with timestamp
+      const backup = { ts: new Date().toISOString(), data: state };
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+    }catch(e){ console.error('Save error', e); }
+  }
+
+  // autosave every 5s when changes occur
+  function scheduleAutosave(){
+    if(autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(()=>{ saveState(); autoSaveTimer=null; }, 1200);
+  }
+
+  // reset app
+  function resetApp(){
+    if(confirm('Reset app: semua data akan dihapus?')) {
+      localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(BACKUP_KEY);
+      location.reload();
+    }
+  }
+
+  // ======================
+  // Page & Data Creators
+  // ======================
+  function createPage(title='Untitled', icon='📄'){
+    return {
+      id: uid('p'),
+      title,
+      icon,
+      blocks: [],
+      events: []
+    };
+  }
+
+  // find active page
+  function activePage(){
+    return state.pages.find(p=>p.id===state.activePageId) || null;
+  }
+
+  // ======================
+  // Sidebar Logic
+  // ======================
+  const pagesListEl = qs('#pages-list');
+  const pageSearchEl = qs('#page-search');
+  const addPageBtn = qs('#add-page');
+  const settingsBtn = qs('#settings-btn');
+  const exportBtn = qs('#export-btn');
+  const importBtn = qs('#import-btn');
+
+  function renderSidebar(filter=''){
+    pagesListEl.innerHTML='';
+    const pages = state.pages.filter(p => p.title.toLowerCase().includes(filter.toLowerCase()));
+    pages.forEach(p=>{
+      const pi = el('div',{class:'page-item'+(p.id===state.activePageId?' active':''), draggable:false});
+      pi.addEventListener('click', ()=>{ state.activePageId = p.id; renderAll(); });
+      const ico = el('div',{html: p.icon, style:'font-size:18px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,0.02),transparent);'});
+      const txt = el('div',{}, el('div',{html:p.title}), el('div',{class:'small', html: p.events.length + ' events • ' + p.blocks.length + ' blocks'}));
+      const actions = el('div',{}, el('button',{class:'button small', title:'Rename'}, '✎'));
+      // rename on click of rename button
+      actions.querySelector('button').addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const newTitle = prompt('Nama halaman baru', p.title);
+        if(newTitle){ p.title = newTitle; saveState(); renderAll(); }
+      });
+      // right-click delete
+      pi.addEventListener('contextmenu', (ev)=>{ ev.preventDefault(); if(confirm('Hapus halaman "'+p.title+'"?')){ state.pages = state.pages.filter(x=>x.id!==p.id); if(state.activePageId===p.id) state.activePageId = state.pages[0]?state.pages[0].id:null; saveState(); renderAll(); }});
+      pi.appendChild(ico); pi.appendChild(txt); pi.appendChild(actions);
+      pagesListEl.appendChild(pi);
+    });
+  }
+
+  pageSearchEl.addEventListener('input', e=>renderSidebar(e.target.value));
+  addPageBtn.addEventListener('click', ()=>{
+    const title = prompt('Judul halaman baru','New Page');
+    if(title){
+      const p = createPage(title, randomEmoji());
+      state.pages.push(p);
+      state.activePageId = p.id;
+      saveState(); renderAll();
+    }
+  });
+
+  // quick import/export
+  exportBtn.addEventListener('click', ()=>{ downloadJSON(state, (state.activePageId?state.pages.find(p=>p.id===state.activePageId).title:'eo') + '_export.json'); });
+  importBtn.addEventListener('click', ()=> qs('#file-input').click());
+  qs('#file-input').addEventListener('change', handleFileImport);
+
+  settingsBtn.addEventListener('click', ()=> openSettings());
+
+  // ======================
+  // Editor Engine (Blocks)
+  // ======================
+  const blocksEl = qs('#blocks');
+  const pageTitleEl = qs('#page-title');
+  const pageMetaEl = qs('#page-meta');
+  const btnAddBlock = qs('#btn-add-block');
+  const btnAddBlockBottom = qs('#btn-add-block-bottom');
+  const btnMarkdown = qs('#btn-markdown');
+  const btnExportPage = qs('#btn-export-page');
+  const btnDeletePage = qs('#btn-delete-page');
+
+  // block menu (simple)
+  function openBlockMenu(afterIndex){
+    const t = prompt('Block type (p/h1/quote/todo/ul/ol/code/image/divider). Example: p','p');
+    if(!t) return;
+    const typeMap = {p:'paragraph', h1:'heading1', quote:'quote', todo:'todo', ul:'list', ol:'olist', code:'code', image:'image', divider:'divider'};
+    const type = typeMap[t] || 'paragraph';
+    const content = (type==='heading1')? 'Heading': (type==='todo')? 'New todo': (type==='image')? 'https://': 'New block';
+    const b = { id: uid('b'), type, content, checked:false };
+    const p = activePage();
+    if(!p) return;
+    if(afterIndex===undefined) p.blocks.push(b); else p.blocks.splice(afterIndex+1,0,b);
+    saveState(); scheduleAutosave(); renderEditor();
+  }
+
+  btnAddBlock.addEventListener('click', ()=> openBlockMenu());
+  btnAddBlockBottom.addEventListener('click', ()=> openBlockMenu());
+
+  // render editor
+  function renderEditor(){
+    const p = activePage();
+    if(!p){ blocksEl.innerHTML='No page selected'; pageTitleEl.value=''; pageMetaEl.textContent='—'; return; }
+    pageTitleEl.value = p.title;
+    pageMetaEl.textContent = `${p.blocks.length} blocks • ${p.events.length} events`;
+    blocksEl.innerHTML = '';
+    p.blocks.forEach((b, idx)=>{
+      const be = el('div',{class:'block', draggable:true, 'data-id':b.id});
+      // drag handlers
+      be.addEventListener('dragstart', (ev)=>{ ev.dataTransfer.setData('text/plain', b.id); be.style.opacity='0.4';});
+      be.addEventListener('dragend', ()=>{ be.style.opacity='1';});
+      be.addEventListener('dragover', (ev)=>{ ev.preventDefault(); be.style.boxShadow='inset 0 0 0 2px rgba(255,255,255,0.02)';});
+      be.addEventListener('dragleave', ()=>{ be.style.boxShadow='none';});
+      be.addEventListener('drop', (ev)=>{ ev.preventDefault(); const bid = ev.dataTransfer.getData('text/plain'); reorderBlocks(bid, b.id); be.style.boxShadow='none'; });
+
+      // content
+      const content = el('div',{class:'content', contenteditable:true, 'data-id':b.id});
+      // set initial render depending on type
+      if(b.type==='heading1'){ content.style.fontWeight='700'; content.style.fontSize='18px'; content.innerText = b.content || 'Heading'; }
+      else if(b.type==='quote'){ content.style.fontStyle='italic'; content.innerText = b.content || 'Quote'; }
+      else if(b.type==='todo'){
+        const chk = el('input',{type:'checkbox'}); chk.checked = !!b.checked;
+        chk.addEventListener('change', ()=>{ b.checked = chk.checked; saveState(); scheduleAutosave(); renderEditor(); });
+        content.appendChild(chk); const sp = el('span',{style:'margin-left:8px'}, b.content || 'Todo'); 
+        content.appendChild(sp);
+      } else if(b.type==='list' || b.type==='olist'){ content.innerText = b.content || 'List item'; }
+      else if(b.type==='code'){ const pre = el('pre',{style:'background:rgba(0,0,0,0.06);padding:8px;border-radius:6px'}, b.content || '// code'); content.appendChild(pre); }
+      else if(b.type==='image'){ const img = el('img',{src:b.content||'', style:'max-width:100%;border-radius:8px'}); content.appendChild(img); }
+      else if(b.type==='divider'){ const hr = el('hr'); content.appendChild(hr);}
+      else { content.innerText = b.content || 'Type / for menu'; }
+
+      // content change commit
+      content.addEventListener('input', (ev)=>{
+        if(b.type==='todo'){
+          // keep todo text in span
+          const span = content.querySelector('span');
+          b.content = span?span.innerText: '';
+        } else if(b.type==='image'){
+          const img = content.querySelector('img');
+          b.content = img?img.src:content.innerText;
+        } else if(b.type==='code'){
+          const pre = content.querySelector('pre');
+          b.content = pre?pre.innerText: content.innerText;
+        } else {
+          b.content = content.innerText;
+        }
+        scheduleAutosave();
+      });
+
+      // keyboard shortcuts for blocks (slash menu)
+      content.addEventListener('keydown', (ev)=>{
+        if(ev.key==='/' && !ev.shiftKey && !ev.ctrlKey){
+          ev.preventDefault();
+          openBlockMenu(idx);
+        }
+        if(ev.key==='Backspace' && content.innerText.trim()==='' ){
+          ev.preventDefault();
+          // remove block
+          if(confirm('Hapus block kosong?')){ p.blocks = p.blocks.filter(x=>x.id!==b.id); saveState(); renderEditor(); }
+        }
+      });
+
+      // meta row
+      const meta = el('div',{class:'meta'});
+      const btns = el('div',{style:'display:flex;gap:6px;margin-left:auto'});
+      const del = el('button',{class:'button small'}, 'Delete');
+      del.addEventListener('click', ()=>{ if(confirm('Hapus block ini?')){ p.blocks = p.blocks.filter(x=>x.id!==b.id); saveState(); renderEditor(); } });
+      btns.appendChild(del);
+      meta.appendChild(btns);
+
+      be.appendChild(content); be.appendChild(meta);
+      blocksEl.appendChild(be);
+    });
+  }
+
+  // reorder blocks: move block with idA before idB
+  function reorderBlocks(dragId, targetId){
+    const p = activePage(); if(!p) return;
+    const idxA = p.blocks.findIndex(x=>x.id===dragId);
+    const idxB = p.blocks.findIndex(x=>x.id===targetId);
+    if(idxA<0||idxB<0) return;
+    const [moved] = p.blocks.splice(idxA,1);
+    p.blocks.splice(idxB,0,moved);
+    saveState(); renderEditor();
+  }
+
+  // title edits
+  pageTitleEl.addEventListener('change', (e)=>{
+    const p = activePage(); if(!p) return; p.title = e.target.value; saveState(); renderSidebar(); scheduleAutosave();
+  });
+
+  // delete page
+  btnDeletePage.addEventListener('click', ()=>{
+    const p = activePage(); if(!p) return;
+    if(confirm('Hapus halaman "'+p.title+'"?')){ state.pages = state.pages.filter(x=>x.id!==p.id); state.activePageId = state.pages[0]?state.pages[0].id:null; saveState(); renderAll(); }
+  });
+
+  // export page
+  btnExportPage.addEventListener('click', ()=>{
+    const p = activePage(); if(!p) return;
+    downloadJSON(p, sanitizeFilename(p.title)+'.page.json');
+  });
+
+  // markdown export (simple)
+  btnMarkdown.addEventListener('click', ()=>{
+    const p = activePage(); if(!p) return;
+    const md = blocksToMarkdown(p.blocks);
+    downloadText(md, sanitizeFilename(p.title)+'.md');
+  });
+
+  function blocksToMarkdown(blocks){
+    let out = '# '+ (activePage()?.title || 'Untitled') + '\\n\\n';
+    for(const b of blocks){
+      if(b.type==='heading1') out += '## '+b.content+'\\n\\n';
+      else if(b.type==='paragraph') out += b.content+'\\n\\n';
+      else if(b.type==='quote') out += '> '+b.content+'\\n\\n';
+      else if(b.type==='todo') out += '- [ '+(b.checked? 'x':' ')+' ] '+b.content+'\\n';
+      else if(b.type==='list') out += '- '+b.content+'\\n';
+      else if(b.type==='olist') out += '1. '+b.content+'\\n';
+      else if(b.type==='code') out += '```\\n'+b.content+'\\n```\\n\\n';
+      else if(b.type==='image') out += '![]('+b.content+')\\n\\n';
+      else if(b.type==='divider') out += '---\\n';
+    }
+    return out;
+  }
+
+  // ======================
+  // Calendar Renderer & Events
+  // ======================
+  const calGrid = qs('#cal-grid');
+  const calMonthEl = qs('#cal-month');
+  const calPrev = qs('#cal-prev'), calNext = qs('#cal-next'), btnToday = qs('#btn-today'), calMode = qs('#cal-mode');
+
+  let calDate = new Date(); // current visible month
+
+  // render month or week
+  function renderCalendar(){
+    calGrid.innerHTML = '';
+    const mode = calMode.value;
+    if(mode==='month'){ renderMonth(); } else { renderWeek(); }
+  }
+
+  function renderMonth(){
+    const year = calDate.getFullYear(), month = calDate.getMonth();
+    calMonthEl.textContent = calDate.toLocaleString('default',{month:'long',year:'numeric'});
+    // day headers
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    days.forEach(d=> calGrid.appendChild(el('div',{class:'cal-cell', style:'background:transparent;color:var(--muted);border-radius:0;padding:6px 0;font-weight:700'}, d)));
+    // first day position
+    const first = new Date(year,month,1).getDay();
+    const daysIn = new Date(year,month+1,0).getDate();
+    // fill leading empties
+    for(let i=0;i<first;i++) calGrid.appendChild(el('div',{class:'cal-cell',style:'background:transparent'}));
+    for(let day=1; day<=daysIn; day++){
+      const cellDate = new Date(year,month,day);
+      const iso = cellDate.toISOString().split('T')[0];
+      const cell = el('div',{class:'cal-cell', 'data-date':iso});
+      if(iso===todayKey()) cell.classList.add('cal-today');
+      cell.addEventListener('dblclick', ()=> openEventModalForDate(iso));
+      // allow dropping events
+      cell.addEventListener('dragover', ev=> ev.preventDefault());
+      cell.addEventListener('drop', (ev)=>{
+        ev.preventDefault();
+        const evId = ev.dataTransfer.getData('text/plain');
+        handleEventDrop(evId, iso);
+      });
+
+      cell.appendChild(el('div',{class:'cal-date'}, day));
+      // collect events from all pages that match date
+      const evs = allEventsOnDate(iso);
+      evs.slice(0,4).forEach(e=>{
+        const pill = el('div',{class:'event-pill', draggable:true, style:'background:'+e.color}, e.title);
+        pill.addEventListener('dragstart',(ev)=>{ ev.dataTransfer.setData('text/plain', e.id); });
+        pill.addEventListener('click', ()=> openEventModal(e.id));
+        cell.appendChild(pill);
+      });
+      if(evs.length>4) cell.appendChild(el('div',{class:'small'}, '+'+(evs.length-4)+' more'));
+      calGrid.appendChild(cell);
+    }
+    // fill trailing empties to complete grid 7x?
+    const totalCells = calGrid.children.length;
+    const remainder = (7 - (totalCells % 7)) %7;
+    for(let i=0;i<remainder;i++) calGrid.appendChild(el('div',{class:'cal-cell',style:'background:transparent'}));
+  }
+
+  function renderWeek(){
+    // simple week render - not fully implemented for brevity (still functional)
+    calMonthEl.textContent = 'Week View • ' + calDate.toLocaleDateString();
+    calGrid.innerHTML='';
+    // show 7 day columns with hourly slots? For brevity, we show list per day
+    const start = new Date(calDate);
+    start.setDate(start.getDate()-start.getDay());
+    for(let i=0;i<7;i++){
+      const d = new Date(start); d.setDate(start.getDate()+i);
+      const iso = d.toISOString().split('T')[0];
+      const col = el('div',{class:'cal-cell', style:'min-height:120px;display:flex;flex-direction:column;overflow:auto'});
+      col.appendChild(el('div',{class:'cal-date'}, d.toLocaleDateString(undefined,{weekday:'short', day:'numeric'})));
+      const evs = allEventsOnDate(iso);
+      evs.forEach(e=>{
+        const pill = el('div',{class:'event-pill', style:'background:'+e.color}, e.time + ' • ' + e.title);
+        pill.addEventListener('click', ()=> openEventModal(e.id));
+        col.appendChild(pill);
+      });
+      calGrid.appendChild(col);
+    }
+  }
+
+  calPrev.addEventListener('click', ()=> { if(calMode.value==='month') calDate.setMonth(calDate.getMonth()-1); else calDate.setDate(calDate.getDate()-7); renderCalendar(); });
+  calNext.addEventListener('click', ()=> { if(calMode.value==='month') calDate.setMonth(calDate.getMonth()+1); else calDate.setDate(calDate.getDate()+7); renderCalendar(); });
+  btnToday.addEventListener('click', ()=> { calDate = new Date(); renderCalendar(); });
+  calMode.addEventListener('change', renderCalendar);
+
+  function allEventsOnDate(isoDate){
+    // flatten events across pages, attach pageId
+    const arr = [];
+    for(const p of state.pages){
+      for(const e of p.events){
+        if(e.date === isoDate){
+          arr.push({...e, pageId:p.id});
+        }
+      }
+    }
+    return arr.sort((a,b)=> (a.time||'')> (b.time||'') ? 1:-1);
+  }
+
+  // find event by id across pages
+  function findEventGlobal(evId){
+    for(const p of state.pages){
+      const e = p.events.find(x=>x.id===evId);
+      if(e) return {event:e, page:p};
+    }
+    return null;
+  }
+
+  function handleEventDrop(evId, targetDate){
+    const found = findEventGlobal(evId);
+    if(!found) return;
+    if(confirm('Pindahkan event "'+found.event.title+'" ke '+targetDate+'?')){
+      found.event.date = targetDate;
+      saveState(); renderAll();
+    }
+  }
+
+  // ======================
+  // Modals: Event Modal & Settings
+  // ======================
+  const modalEvent = qs('#modal-event');
+  const evName = qs('#ev-name'), evDate = qs('#ev-date'), evTime = qs('#ev-time'), evDesc = qs('#ev-desc'), evColor = qs('#ev-color');
+  const evSave = qs('#ev-save'), evCancel = qs('#ev-cancel'), evDelete = qs('#ev-delete');
+
+  let editingEvent = null; // {event, page}
+
+  function openEventModal(evId){
+    const found = findEventGlobal(evId);
+    if(!found) return;
+    editingEvent = found;
+    qs('#ev-title').textContent = 'Edit Event';
+    evName.value = editingEvent.event.title;
+    evDate.value = editingEvent.event.date;
+    evTime.value = editingEvent.event.time || '';
+    evDesc.value = editingEvent.event.desc || '';
+    evColor.value = editingEvent.event.color || '#7C3AED';
+    modalEvent.style.display = 'flex';
+  }
+
+  function openEventModalForDate(isoDate){
+    editingEvent = null;
+    qs('#ev-title').textContent = 'Tambah Event';
+    evName.value=''; evDate.value=isoDate; evTime.value='18:00'; evDesc.value=''; evColor.value='#7C3AED';
+    modalEvent.style.display='flex';
+  }
+
+  evCancel.addEventListener('click', ()=> modalEvent.style.display='none');
+
+  evSave.addEventListener('click', ()=>{
+    const name = evName.value.trim(); if(!name){ alert('Nama event kosong'); return; }
+    const date = evDate.value || todayKey();
+    const time = evTime.value || '';
+    const desc = evDesc.value || '';
+    const color = evColor.value || '#7C3AED';
+    if(editingEvent){
+      // update
+      const e = editingEvent.event;
+      e.title = name; e.date = date; e.time = time; e.desc = desc; e.color = color;
+      saveState(); modalEvent.style.display='none'; renderAll();
+    } else {
+      // create - add to active page
+      const p = activePage();
+      if(!p){ alert('Pilih halaman dulu'); return; }
+      const ev = { id: uid('e'), title: name, date, time, desc, color };
+      p.events.push(ev);
+      saveState(); modalEvent.style.display='none'; renderAll();
+    }
+  });
+
+  evDelete.addEventListener('click', ()=>{
+    if(!editingEvent) return;
+    if(confirm('Hapus event "'+editingEvent.event.title+'"?')){
+      editingEvent.page.events = editingEvent.page.events.filter(x=>x.id!==editingEvent.event.id);
+      saveState(); modalEvent.style.display='none'; renderAll();
+    }
+  });
+
+  // SETTINGS modal
+  const modalSettings = qs('#modal-settings');
+  const logoChoices = qsa('.logo-choice');
+  const settingsTheme = qs('#settings-theme');
+  const btnReset = qs('#btn-reset');
+  const btnCloseSettings = qs('#btn-close-settings');
+
+  settingsBtn.addEventListener('click', ()=> openSettings());
+  btnCloseSettings.addEventListener('click', ()=> modalSettings.style.display='none');
+  btnReset.addEventListener('click', resetApp);
+
+  function openSettings(){
+    modalSettings.style.display='flex';
+    settingsTheme.value = state.settings.theme || 'dark';
+  }
+  logoChoices.forEach(b=>{
+    b.addEventListener('click', ()=> { state.settings.logo = b.dataset.logo; saveState(); renderLogo(); modalSettings.style.display='none'; renderAll(); });
+  });
+  settingsTheme.addEventListener('change', ()=>{ state.settings.theme = settingsTheme.value; applyTheme(); saveState(); });
+
+  // ======================
+  // AI Assistant (Offline Simulation)
+  // ======================
+  const aiBtn = qs('#btn-ai'), aiChat = qs('#ai-chat'), aiClose = qs('#ai-close'), aiMessages = qs('#ai-messages'), aiInput = qs('#ai-input'), aiSend = qs('#ai-send');
+  const aiReplies = {
+    'buat rundown': `Berikut contoh rundown singkat:
+- 17:00 Persiapan panggung
+- 18:00 Soundcheck
+- 19:00 Pintu dibuka
+- 19:30 Acara utama
+- 21:00 Pembubaran
+Anda bisa minta detail tiap sesi.`,
+    'tulis deskripsi': `Deskripsi event: "Sebuah malam penuh musik dan karya, menghadirkan penampilan terbaik dari ...". Sertakan waktu, lokasi, dress code, highlight acara.`,
+    'rangkuman': `Rangkuman: Inti catatan menyebutkan tujuan acara, timeline penting, daftar peralatan, dan kontak person. Prioritaskan soundcheck dan keamanan.`,
+    'buat checklist': `Checklist otomatis:
+- [ ] Konfirmasi venue
+- [ ] Kontrak talent
+- [ ] Pengaturan sound
+- [ ] Transport & logistik
+- [ ] Keamanan & izin`,
+    'suggest name': `Beberapa nama event: "NightPulse Fest", "StageLights Live", "Echoes Concert"`,
+  };
+
+  aiBtn.addEventListener('click', ()=>{ aiChat.classList.add('open'); aiInput.focus(); });
+  aiClose.addEventListener('click', ()=> aiChat.classList.remove('open'));
+  aiSend.addEventListener('click', ()=> handleAIMessage(aiInput.value.trim()));
+  aiInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') handleAIMessage(aiInput.value.trim()); });
+
+  function handleAIMessage(msg){
+    if(!msg) return;
+    appendAIBubble('user', msg);
+    aiInput.value='';
+    // simulate thinking + typing
+    appendAIBubble('ai', '...'); // placeholder
+    setTimeout(()=>{
+      // simple keyword matching
+      let key='rangkuman';
+      const m = msg.toLowerCase();
+      if(m.includes('rundown') || m.includes('rencana') || m.includes('jadwal')) key='buat rundown';
+      else if(m.includes('deskripsi')) key='tulis deskripsi';
+      else if(m.includes('check') || m.includes('checklist') || m.includes('daftar')) key='buat checklist';
+      else if(m.includes('nama') || m.includes('suggest')) key='suggest name';
+      else if(m.includes('rangkuman')) key='rangkuman';
+      const reply = aiReplies[key] || 'Maaf saya tidak mengerti. Coba "buat rundown" atau "tulis deskripsi".';
+      // replace last AI bubble content with typing effect
+      typeAIBubble(reply);
+    }, 800 + Math.random()*600);
+  }
+
+  function appendAIBubble(kind, text){
+    const b = el('div',{class:'ai-bubble '+(kind==='ai'?'ai':'user')}, text);
+    aiMessages.appendChild(b);
+    aiMessages.scrollTop = aiMessages.scrollHeight;
+  }
+
+  function typeAIBubble(text){
+    // replace last ai bubble '...' with typing effect
+    const bubbles = qsa('#ai-messages .ai-bubble.ai');
+    const last = bubbles[bubbles.length-1];
+    if(!last) return;
+    last.textContent = '';
+    let i=0;
+    const t = setInterval(()=>{ last.textContent += text[i++] || ''; aiMessages.scrollTop = aiMessages.scrollHeight; if(i>text.length){ clearInterval(t);} }, 16 + Math.random()*20);
+  }
+
+  // ======================
+  // Export / Import JSON
+  // ======================
+  function downloadJSON(obj, filename='export.json'){
+    const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    downloadUrl(url, filename);
+  }
+  function downloadText(txt, filename='file.txt'){
+    const blob = new Blob([txt], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    downloadUrl(url, filename);
+  }
+  function downloadUrl(url, filename){
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function sanitizeFilename(s){ return s.replace(/[^a-z0-9_\-\.]/gi,'_').toLowerCase(); }
+
+  function handleFileImport(e){
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = (ev)=>{
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(data.pages && Array.isArray(data.pages)){
+          if(confirm('Import data akan menggantikan data saat ini. Lanjutkan?')){
+            state = data;
+            saveState(); renderAll();
+          }
+        } else {
+          // maybe single page import
+          if(data.title && data.blocks){
+            const p = data; state.pages.push(p); state.activePageId = p.id; saveState(); renderAll();
+          } else alert('File JSON tidak sesuai struktur.');
+        }
+      }catch(err){ alert('Gagal membaca JSON: '+err); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  }
+
+  // ======================
+  // Utilities & UI helpers
+  // ======================
+  function renderLogo(){
+    const logo = qs('#logo-display');
+    const l = state.settings.logo || 'n';
+    if(l==='n'){ logo.innerHTML = '<svg width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" rx="10" fill="#fff"/><text x="50%" y="55%" text-anchor="middle" font-size="36" font-weight="700" fill="#000">N</text></svg>'; }
+    else if(l==='neon'){ logo.innerHTML = '<svg width="36" height="36" viewBox="0 0 64 64"><rect rx="10" width="64" height="64" fill="url(#g)"/><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#00E0FF"/></linearGradient></defs><g fill="none" stroke="#fff" stroke-width="2"><rect x="12" y="12" width="40" height="40" rx="8"/></g></svg>'; }
+    else if(l==='sphere'){ logo.innerHTML = '<svg width="36" height="36" viewBox="0 0 64 64"><defs><radialGradient id="rg"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#00E0FF"/></radialGradient></defs><circle cx="32" cy="32" r="22" fill="url(#rg)" opacity="0.95"/></svg>'; }
+    else if(l==='ai'){ logo.innerHTML = '<svg width="36" height="36" viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#0f172a"/><path d="M22 30c3-6 8-8 14-6" stroke="#7C3AED" stroke-width="2" fill="none"/><path d="M28 38c6 2 10 0 12-6" stroke="#00E0FF" stroke-width="2" fill="none"/></svg>'; }
+  }
+
+  function applyTheme(){
+    if(state.settings.theme==='light') document.documentElement.setAttribute('data-theme','light');
+    else document.documentElement.removeAttribute('data-theme');
+    qs('#theme-select').value = state.settings.theme==='light'?'light':'dark';
+  }
+
+  // random emoji for new pages
+  function randomEmoji(){
+    const em = ['🎵','🎫','🎤','🎬','📅','📣','📝','⭐','🔥','🎧','🎭','🎉','✨'];
+    return em[Math.floor(Math.random()*em.length)];
+  }
+
+  // ======================
+  // Shortcuts & Small UX
+  // ======================
+  document.addEventListener('keydown', (e)=>{
+    if(e.ctrlKey && e.key.toLowerCase()==='s'){ e.preventDefault(); saveState(); alert('Disimpan.'); }
+    if(e.ctrlKey && e.key.toLowerCase()==='k'){ e.preventDefault(); pageSearchEl.focus(); pageSearchEl.select(); }
+    if(e.key==='/' && document.activeElement.tagName==='DIV'){ openBlockMenu(); }
+  });
+
+  // quick add event via toolbar
+  qs('#btn-new-event').addEventListener('click', ()=> openEventModalForDate(todayKey()));
+
+  // export current page to markdown/json
+  qs('#btn-export-page').addEventListener('click', ()=>{
+    const p = activePage();
+    if(!p) return alert('No page');
+    downloadJSON(p, sanitizeFilename(p.title)+'.page.json');
+  });
+
+  // Delete page via toolbar
+  qs('#btn-delete-page').addEventListener('click', ()=> btnDeletePage.click());
+
+  // Calendar click new event: handled via dblclick on cells
+  // General render helper
+  function renderAll(){
+    renderSidebar(pageSearchEl.value || '');
+    renderEditor();
+    renderCalendar();
+    renderLogo();
+    applyTheme();
+  }
+
+  // ======================
+  // Init
+  // ======================
+  loadState();
+  // if no active page, set first
+  if(!state.activePageId && state.pages.length) state.activePageId = state.pages[0].id;
+  // apply settings
+  if(state.settings && state.settings.theme) { applyTheme(); }
+  renderAll();
+
+  // autosave on unload
+  window.addEventListener('beforeunload', ()=> saveState());
+  // periodic backup every 5 minutes
+  setInterval(()=>{ saveState(); }, 1000*60*5);
+
+  // expose some for console debugging
+  window.EO = { state, saveState, resetApp };
+
+  /* ======================
+     MODAL OPEN/CLOSE BUTTONS & UI HOOKUPS
+     ====================== */
+  // open settings
+  qs('#settings-btn').addEventListener('click', ()=> modalSettings.style.display='flex');
+  // close modals when clicking overlay (if clicking outside dialog)
+  qsa('.modal').forEach(m=>{
+    m.addEventListener('click', (ev)=>{ if(ev.target===m) m.style.display='none'; });
+  });
+
+  // timeline & other features omitted for brevity but structure allows extension
+
+  // small helper to open page by id from URL hash
+  if(location.hash){
+    const id = location.hash.replace('#','');
+    if(state.pages.find(p=>p.id===id)) { state.activePageId = id; renderAll(); }
+  }
+
+  // search quick open (Ctrl+K)
+  pageSearchEl.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){
+      const q = pageSearchEl.value.trim();
+      const found = state.pages.find(p=>p.title.toLowerCase().includes(q.toLowerCase()));
+      if(found){ state.activePageId = found.id; pageSearchEl.value=''; renderAll(); }
+    }
+  });
+
+  // initial small UI hint
+  console.log('EO Notion loaded. State object available at window.EO');
+
+})();
+</script>
+</body>
+</html>

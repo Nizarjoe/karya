@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Pementasan Oktober–November</title>
+    <meta name="description" content="Platform kolaboratif untuk mengatur, mendokumentasikan, dan menampilkan jadwal seni secara interaktif.">
+    
+    <!-- 
+    Project: Timeline Kolaboratif Seni - Oktober–November
+    Fitur: Login mock, Markdown editor, ekspor/impor (MD, PDF, DOCX, XLSX, ICS)
+    Desain: UI modern seperti Notion + Linear + Framer
+    Teknologi: TailwindCSS + JS Vanilla + LocalStorage
+    Migrasi ke Next.js: pisahkan menjadi komponen (Home, Timeline, Editor, Modal)
+    Auth nyata: integrasikan NextAuth.js + Supabase
+    -->
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- FileSaver.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f3ff 0%, #fef3c7 50%, #ffffff 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #9333ea 0%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(147, 51, 234, 0.15);
+        }
+        
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-ripple::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn-ripple:active::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .timeline-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, #9333ea, #fbbf24);
+            transform: translateX(-50%);
+        }
+        
+        @media (max-width: 768px) {
+            .timeline-line {
+                left: 20px;
+            }
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #9333ea, #fbbf24);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .agenda-glow {
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+        }
+        
+        .markdown-preview {
+            line-height: 1.7;
+        }
+        
+        .markdown-preview h1 { font-size: 2em; font-weight: 700; margin: 1em 0 0.5em; }
+        .markdown-preview h2 { font-size: 1.5em; font-weight: 600; margin: 1em 0 0.5em; }
+        .markdown-preview h3 { font-size: 1.25em; font-weight: 600; margin: 1em 0 0.5em; }
+        .markdown-preview p { margin: 0.5em 0; }
+        .markdown-preview ul, .markdown-preview ol { margin: 0.5em 0; padding-left: 2em; }
+        .markdown-preview code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+        .markdown-preview pre { background: #f3f4f6; padding: 1em; border-radius: 8px; overflow-x: auto; }
+        
+        .smooth-scroll {
+            scroll-behavior: smooth;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="smooth-scroll">
+    
+    <!-- Navigation -->
+    <nav class="glass-effect fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-yellow-400"></div>
+                    <span class="font-bold text-lg gradient-text">Timeline Seni</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="#home" class="text-gray-700 hover:text-purple-600 transition">Beranda</a>
+                    <a href="#timeline" class="text-gray-700 hover:text-purple-600 transition">Timeline</a>
+                    <div id="userAvatar" class="hidden"></div>
+                    <button id="loginBtn" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-yellow-400 text-white rounded-lg btn-ripple hover:shadow-lg transition">
+                        Masuk
+                    </button>
+                    <button id="logoutBtn" class="hidden px-4 py-2 bg-red-500 text-white rounded-lg btn-ripple hover:shadow-lg transition">
+                        Keluar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section id="home" class="pt-32 pb-20 px-4">
+        <div class="max-w-6xl mx-auto text-center">
+            <h1 class="text-5xl md:text-7xl font-bold gradient-text mb-6">
+                Timeline Pementasan<br>Oktober–November
+            </h1>
+            <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Platform kolaboratif untuk mengatur, mendokumentasikan, dan menampilkan jadwal seni secara interaktif.<br>
+                Edit dengan Markdown, ekspor ke PDF, Word, Excel, bahkan kalender — semua langsung di browser.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#timeline" class="px-8 py-4 bg-gradient-to-r from-purple-600 to-yellow-400 text-white rounded-xl font-semibold btn-ripple hover:shadow-2xl transition text-lg">
+                    Lihat Timeline
+                </a>
+                <button id="loginBtnHero" class="px-8 py-4 glass-effect text-gray-700 rounded-xl font-semibold btn-ripple hover:shadow-lg transition text-lg">
+                    Mulai Login
+                </button>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Timeline Section -->
+    <section id="timeline" class="py-20 px-4">
+        <div class="max-w-6xl mx-auto">
+            
+            <!-- Controls -->
+            <div class="glass-effect rounded-2xl p-6 mb-8">
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex-1 w-full">
+                        <div class="relative">
+                            <input type="text" id="searchInput" placeholder="Cari kegiatan..." 
+                                class="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition">
+                            <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <select id="filterKategori" class="px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition">
+                            <option value="">Semua Kategori</option>
+                            <option value="Agenda Terdekat">Agenda Terdekat</option>
+                            <option value="Persiapan">Persiapan</option>
+                            <option value="Latihan">Latihan</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Puncak Acara">Puncak Acara</option>
+                        </select>
+                        <select id="filterStatus" class="px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition">
+                            <option value="">Semua Status</option>
+                            <option value="Mendatang">Mendatang</option>
+                            <option value="Selesai">Selesai</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Export/Import -->
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <button id="exportMd" class="px-4 py-2 bg-blue-500 text-white rounded-lg btn-ripple hover:shadow-lg transition text-sm">
+                        📄 Ekspor MD
+                    </button>
+                    <button id="exportPdf" class="px-4 py-2 bg-red-500 text-white rounded-lg btn-ripple hover:shadow-lg transition text-sm">
+                        📕 Ekspor PDF
+                    </button>
+                    <button id="exportDocx" class="px-4 py-2 bg-blue-600 text-white rounded-lg btn-ripple hover:shadow-lg transition text-sm">
+                        📘 Ekspor DOCX
+                    </button>
+                    <button id="exportXlsx" class="px-4 py-2 bg-green-600 text-white rounded-lg btn-ripple hover:shadow-lg transition text-sm">
+                        📗 Ekspor XLSX
+                    </button>
+                    <button id="exportIcs" class="px-4 py-2 bg-purple-600 text-white rounded-lg btn-ripple hover:shadow-lg transition text-sm">
+                        📅 Ekspor ICS
+                    </button>
+                    <label class="px-4 py-2 bg-gray-700 text-white rounded-lg btn-ripple hover:shadow-lg transition cursor-pointer text-sm">
+                        📥 Impor
+                        <input type="file" id="importFile" accept=".json,.md,.xlsx,.ics" class="hidden">
+                    </label>
+                </div>
+                
+                <button id="addEventBtn" class="mt-4 w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-yellow-400 text-white rounded-xl font-semibold btn-ripple hover:shadow-lg transition">
+                    ➕ Tambah Kegiatan Baru
+                </button>
+            </div>
+            
+            <!-- Agenda Terdekat -->
+            <div id="agendaSection" class="mb-12">
+                <h2 class="text-3xl font-bold gradient-text mb-6">🌟 Agenda Terdekat</h2>
+                <div id="agendaContainer" class="grid md:grid-cols-2 gap-4"></div>
+            </div>
+            
+            <!-- Timeline -->
+            <h2 class="text-3xl font-bold gradient-text mb-8">📅 Timeline Lengkap</h2>
+            <div class="relative">
+                <div class="timeline-line hidden md:block"></div>
+                <div id="timelineContainer" class="space-y-8"></div>
+            </div>
+            
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="py-8 px-4 text-center text-gray-600">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex items-center justify-center space-x-2 mb-4">
+                <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-600 to-yellow-400"></div>
+                <span class="font-semibold">Timeline Seni Project</span>
+            </div>
+            <p class="text-sm">© 2025 Timeline Pementasan Oktober–November. Built with ❤️</p>
+            <a href="https://github.com" class="text-purple-600 hover:underline text-sm mt-2 inline-block">GitHub</a>
+        </div>
+    </footer>
+    
+    <!-- Login Modal -->
+    <div id="loginModal" class="hidden fixed inset-0 z-50 modal-backdrop">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="glass-effect rounded-2xl p-8 max-w-md w-full modal-content">
+                <h2 class="text-2xl font-bold gradient-text mb-4">Masuk ke Timeline</h2>
+                <p class="text-gray-600 mb-6">Masukkan nama Anda untuk mulai berkolaborasi</p>
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nama Anda</label>
+                        <input type="text" id="loginName" required 
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition"
+                            placeholder="Contoh: Budi Santoso"
+                            minlength="2">
+                    </div>
+                    <button type="submit" class="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-yellow-400 text-white rounded-xl font-semibold btn-ripple hover:shadow-lg transition">
+                        🚀 Mulai Sekarang
+                    </button>
+                </form>
+                <button id="closeLoginModal" class="mt-4 text-gray-500 hover:text-gray-700 transition">Tutup</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Editor Modal -->
+    <div id="editorModal" class="hidden fixed inset-0 z-50 modal-backdrop overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="glass-effect rounded-2xl p-8 max-w-4xl w-full modal-content my-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold gradient-text">Editor Kegiatan</h2>
+                    <button id="closeEditorModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <form id="editorForm" class="space-y-4">
+                    <input type="hidden" id="editId">
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal / Periode</label>
+                            <input type="text" id="editTanggal" required 
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition"
+                                placeholder="2025-10-20 atau M1 Oktober">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
+                            <select id="editKategori" required 
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition">
+                                <option value="Agenda Terdekat">Agenda Terdekat</option>
+                                <option value="Persiapan">Persiapan</option>
+                                <option value="Latihan">Latihan</option>
+                                <option value="Workshop">Workshop</option>
+                                <option value="Puncak Acara">Puncak Acara</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Judul Kegiatan</label>
+                        <input type="text" id="editKegiatan" required 
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition"
+                            placeholder="Nama kegiatan">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select id="editStatus" 
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition">
+                            <option value="Mendatang">Mendatang</option>
+                            <option value="Selesai">Selesai</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Deskripsi (Markdown)</label>
+                            <textarea id="editDeskripsi" rows="10" 
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-400 focus:outline-none transition font-mono text-sm"
+                                placeholder="# Judul&#10;&#10;Deskripsi dengan **markdown**"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Preview</label>
+                            <div id="markdownPreview" class="w-full h-64 px-4 py-3 rounded-xl border border-gray-200 overflow-y-auto markdown-preview bg-white">
+                                <p class="text-gray-400">Preview akan muncul di sini...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-yellow-400 text-white rounded-xl font-semibold btn-ripple hover:shadow-lg transition">
+                            💾 Simpan
+                        </button>
+                        <button type="button" id="deleteEventBtn" class="px-4 py-3 bg-red-500 text-white rounded-xl font-semibold btn-ripple hover:shadow-lg transition">
+                            🗑️ Hapus
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="mt-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">📜 History (5 Terakhir)</h3>
+                    <div id="historyList" class="space-y-2 max-h-32 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+    
+    <script>
+        // App State
+        const App = {
+            events: [],
+            currentUser: null,
+            editHistory: {},
+            
+            init() {
+                this.loadData();
+                this.setupEventListeners();
+                this.updateAuthUI();
+                this.renderTimeline();
+                this.animateHero();
+            },
+            
+            loadData() {
+                const initialData = [
+                    { id: 1, tanggal: "2025-10-20", kegiatan: "Finalisasi naskah & Rilis proposal sponsor", kategori: "Agenda Terdekat", status: "Mendatang", deskripsi: "" },
+                    { id: 2, tanggal: "2025-10-24", kegiatan: "Pengajuan kolaborasi MSK BATIK 1", kategori: "Agenda Terdekat", status: "Mendatang", deskripsi: "" },
+                    { id: 3, periode: "M1 Oktober", kegiatan: "Penyusunan Kepanitian, Penokohan, Bedah Naskah", kategori: "Persiapan", status: "Selesai", deskripsi: "" },
+                    { id: 4, periode: "M2 Oktober – M3 November", kegiatan: "Latihan", kategori: "Latihan", status: "Mendatang", deskripsi: "" },
+                    { id: 5, periode: "M4 Oktober", kegiatan: "Workshop", kategori: "Workshop", status: "Mendatang", deskripsi: "" },
+                    { id: 6, periode: "M1 November", kegiatan: "Perancangan Artistik", kategori: "Persiapan", status: "Mendatang", deskripsi: "" },
+                    { id: 7, periode: "M4 November", kegiatan: "Pementasan", kategori: "Puncak Acara", status: "Mendatang", deskripsi: "" }
+                ];
+                
+                this.events = JSON.parse(localStorage.getItem('timelineEvents')) || initialData;
+                this.currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                this.editHistory = JSON.parse(localStorage.getItem('editHistory')) || {};
+            },
+            
+            saveData() {
+                localStorage.setItem('timelineEvents', JSON.stringify(this.events));
+                localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                localStorage.setItem('editHistory', JSON.stringify(this.editHistory));
+            },
+            
+            setupEventListeners() {
+                // Login buttons
+                document.getElementById('loginBtn').addEventListener('click', () => this.openModal('loginModal'));
+                document.getElementById('loginBtnHero').addEventListener('click', () => this.openModal('loginModal'));
+                document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+                
+                // Login form
+                document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+                document.getElementById('loginGoogle').addEventListener('click', () => this.showToast('Login via Google akan segera tersedia!', 'info'));
+                document.getElementById('loginGithub').addEventListener('click', () => this.showToast('Login via GitHub akan segera tersedia!', 'info'));
+                
+                // Modal close buttons
+                document.getElementById('closeLoginModal').addEventListener('click', () => this.closeModal('loginModal'));
+                document.getElementById('closeEditorModal').addEventListener('click', () => this.closeModal('editorModal'));
+                
+                // Click backdrop to close
+                document.getElementById('loginModal').addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) this.closeModal('loginModal');
+                });
+                document.getElementById('editorModal').addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) this.closeModal('editorModal');
+                });
+                
+                // Search & Filter
+                document.getElementById('searchInput').addEventListener('input', () => this.renderTimeline());
+                document.getElementById('filterKategori').addEventListener('change', () => this.renderTimeline());
+                document.getElementById('filterStatus').addEventListener('change', () => this.renderTimeline());
+                
+                // Export buttons
+                document.getElementById('exportMd').addEventListener('click', () => this.exportMarkdown());
+                document.getElementById('exportPdf').addEventListener('click', () => this.exportPDF());
+                document.getElementById('exportDocx').addEventListener('click', () => this.exportDOCX());
+                document.getElementById('exportXlsx').addEventListener('click', () => this.exportExcel());
+                document.getElementById('exportIcs').addEventListener('click', () => this.exportCalendar());
+                
+                // Import
+                document.getElementById('importFile').addEventListener('change', (e) => this.importData(e));
+                
+                // Add event button
+                document.getElementById('addEventBtn').addEventListener('click', () => this.openEditor());
+                
+                // Editor form
+                document.getElementById('editorForm').addEventListener('submit', (e) => this.saveEvent(e));
+                document.getElementById('deleteEventBtn').addEventListener('click', () => this.deleteEvent());
+                document.getElementById('editDeskripsi').addEventListener('input', () => this.updateMarkdownPreview());
+            },
+            
+            showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    info: 'bg-blue-500',
+                    warning: 'bg-yellow-500'
+                };
+                
+                toast.className = `toast ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl`;
+                toast.textContent = message;
+                
+                document.getElementById('toastContainer').appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideUp 0.3s ease-out reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+            
+            openModal(modalId) {
+                document.getElementById(modalId).classList.remove('hidden');
+                const modalContent = document.querySelector(`#${modalId} .modal-content`);
+                if (modalContent) {
+                    gsap.from(modalContent, {
+                        scale: 0.9,
+                        opacity: 0,
+                        duration: 0.3,
+                        ease: 'power2.out'
+                    });
+                }
+            },
+            
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.add('hidden');
+            },
+            
+            handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                
+                if (email && password) {
+                    this.currentUser = {
+                        email: email,
+                        name: email.split('@')[0],
+                        initials: email.substring(0, 2).toUpperCase()
+                    };
+                    this.saveData();
+                    this.updateAuthUI();
+                    this.closeModal('loginModal');
+                    this.showToast('Login berhasil! Selamat datang ' + this.currentUser.name);
+                    
+                    // Reset form
+                    document.getElementById('loginForm').reset();
+                }
+            },
+            
+            logout() {
+                this.currentUser = null;
+                this.saveData();
+                this.updateAuthUI();
+                this.showToast('Logout berhasil!', 'info');
+            },
+            
+            updateAuthUI() {
+                const loginBtn = document.getElementById('loginBtn');
+                const logoutBtn = document.getElementById('logoutBtn');
+                const userAvatar = document.getElementById('userAvatar');
+                
+                if (this.currentUser) {
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                    userAvatar.classList.remove('hidden');
+                    userAvatar.innerHTML = `<div class="avatar">${this.currentUser.initials}</div>`;
+                } else {
+                    loginBtn.classList.remove('hidden');
+                    logoutBtn.classList.add('hidden');
+                    userAvatar.classList.add('hidden');
+                }
+            },
+            
+            renderTimeline() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const filterKat = document.getElementById('filterKategori').value;
+                const filterStat = document.getElementById('filterStatus').value;
+                
+                let filteredEvents = this.events.filter(event => {
+                    const matchSearch = event.kegiatan.toLowerCase().includes(searchTerm);
+                    const matchKat = !filterKat || event.kategori === filterKat;
+                    const matchStat = !filterStat || event.status === filterStat;
+                    return matchSearch && matchKat && matchStat;
+                });
+                
+                // Render Agenda Terdekat
+                const agendaEvents = filteredEvents.filter(e => e.kategori === 'Agenda Terdekat');
+                const agendaContainer = document.getElementById('agendaContainer');
+                agendaContainer.innerHTML = agendaEvents.map(event => `
+                    <div class="glass-effect rounded-xl p-6 card-hover agenda-glow cursor-pointer" onclick="App.openEditor(${event.id})">
+                        <div class="flex items-start justify-between mb-2">
+                            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                                ${event.tanggal || event.periode}
+                            </span>
+                            <span class="text-xs font-semibold px-3 py-1 rounded-full ${event.status === 'Selesai' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                                ${event.status || 'Mendatang'}
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">${event.kegiatan}</h3>
+                        <p class="text-sm text-gray-600">${event.kategori}</p>
+                    </div>
+                `).join('');
+                
+                // Render Timeline Lengkap
+                const timelineContainer = document.getElementById('timelineContainer');
+                const otherEvents = filteredEvents.filter(e => e.kategori !== 'Agenda Terdekat');
+                
+                timelineContainer.innerHTML = otherEvents.map((event, index) => `
+                    <div class="flex items-center ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} flex-col">
+                        <div class="flex-1 ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}">
+                            <div class="glass-effect rounded-xl p-6 card-hover cursor-pointer" onclick="App.openEditor(${event.id})">
+                                <div class="flex items-center justify-between mb-3 ${index % 2 === 0 ? 'md:flex-row-reverse' : ''}">
+                                    <span class="text-xs font-semibold px-3 py-1 rounded-full bg-purple-100 text-purple-800">
+                                        ${event.tanggal || event.periode}
+                                    </span>
+                                    <span class="text-xs font-semibold px-3 py-1 rounded-full ${event.status === 'Selesai' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                                        ${event.status || 'Mendatang'}
+                                    </span>
+                                </div>
+                                <h3 class="font-bold text-xl text-gray-800 mb-2">${event.kegiatan}</h3>
+                                <p class="text-sm text-gray-600 mb-2">${event.kategori}</p>
+                                ${event.deskripsi ? `<p class="text-xs text-gray-500 mt-2">📝 Ada catatan</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-yellow-400 flex items-center justify-center text-white font-bold z-10 my-4 md:my-0">
+                            ${index + 1}
+                        </div>
+                        <div class="flex-1"></div>
+                    </div>
+                `).join('');
+                
+                // Animate timeline items
+                if (typeof gsap !== 'undefined') {
+                    gsap.from('.card-hover', {
+                        opacity: 0,
+                        y: 30,
+                        stagger: 0.1,
+                        duration: 0.5,
+                        ease: 'power2.out'
+                    });
+                }
+            },
+            
+            openEditor(eventId = null) {
+                if (!this.currentUser) {
+                    this.showToast('Silakan login terlebih dahulu!', 'warning');
+                    this.openModal('loginModal');
+                    return;
+                }
+                
+                const event = eventId ? this.events.find(e => e.id === eventId) : null;
+                
+                document.getElementById('editId').value = eventId || '';
+                document.getElementById('editTanggal').value = event ? (event.tanggal || event.periode) : '';
+                document.getElementById('editKategori').value = event ? event.kategori : 'Persiapan';
+                document.getElementById('editKegiatan').value = event ? event.kegiatan : '';
+                document.getElementById('editStatus').value = event ? (event.status || 'Mendatang') : 'Mendatang';
+                document.getElementById('editDeskripsi').value = event ? (event.deskripsi || '') : '';
+                
+                this.updateMarkdownPreview();
+                this.loadHistory(eventId);
+                this.openModal('editorModal');
+            },
+            
+            updateMarkdownPreview() {
+                const markdown = document.getElementById('editDeskripsi').value;
+                const preview = document.getElementById('markdownPreview');
+                if (markdown.trim() && typeof marked !== 'undefined') {
+                    preview.innerHTML = marked.parse(markdown);
+                } else {
+                    preview.innerHTML = '<p class="text-gray-400">Preview akan muncul di sini...</p>';
+                }
+            },
+            
+            saveEvent(e) {
+                e.preventDefault();
+                
+                const id = document.getElementById('editId').value;
+                const tanggal = document.getElementById('editTanggal').value;
+                const kategori = document.getElementById('editKategori').value;
+                const kegiatan = document.getElementById('editKegiatan').value;
+                const status = document.getElementById('editStatus').value;
+                const deskripsi = document.getElementById('editDeskripsi').value;
+                
+                const eventData = {
+                    kategori,
+                    kegiatan,
+                    status,
+                    deskripsi
+                };
+                
+                // Check if it's a date or period
+                if (tanggal.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    eventData.tanggal = tanggal;
+                } else {
+                    eventData.periode = tanggal;
+                }
+                
+                if (id) {
+                    // Update existing
+                    const index = this.events.findIndex(e => e.id == id);
+                    this.events[index] = { ...this.events[index], ...eventData };
+                    
+                    // Save to history
+                    if (!this.editHistory[id]) this.editHistory[id] = [];
+                    this.editHistory[id].unshift({
+                        timestamp: new Date().toISOString(),
+                        data: { ...eventData }
+                    });
+                    this.editHistory[id] = this.editHistory[id].slice(0, 5);
+                    
+                    this.showToast('Kegiatan berhasil diperbarui!');
+                } else {
+                    // Create new
+                    const newId = Math.max(...this.events.map(e => e.id), 0) + 1;
+                    this.events.push({ id: newId, ...eventData });
+                    this.showToast('Kegiatan baru berhasil ditambahkan!');
+                }
+                
+                this.saveData();
+                this.renderTimeline();
+                this.closeModal('editorModal');
+            },
+            
+            deleteEvent() {
+                const id = document.getElementById('editId').value;
+                if (id && confirm('Yakin ingin menghapus kegiatan ini?')) {
+                    this.events = this.events.filter(e => e.id != id);
+                    delete this.editHistory[id];
+                    this.saveData();
+                    this.renderTimeline();
+                    this.closeModal('editorModal');
+                    this.showToast('Kegiatan berhasil dihapus!', 'warning');
+                }
+            },
+            
+            loadHistory(eventId) {
+                const historyList = document.getElementById('historyList');
+                if (!eventId || !this.editHistory[eventId]) {
+                    historyList.innerHTML = '<p class="text-xs text-gray-400">Belum ada history</p>';
+                    return;
+                }
+                
+                historyList.innerHTML = this.editHistory[eventId].map((h, i) => `
+                    <div class="text-xs p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100" onclick="App.restoreHistory(${eventId}, ${i})">
+                        📅 ${new Date(h.timestamp).toLocaleString('id-ID')} - ${h.data.kegiatan}
+                    </div>
+                `).join('');
+            },
+            
+            restoreHistory(eventId, historyIndex) {
+                const history = this.editHistory[eventId][historyIndex];
+                if (history && confirm('Pulihkan versi ini?')) {
+                    document.getElementById('editTanggal').value = history.data.tanggal || history.data.periode;
+                    document.getElementById('editKategori').value = history.data.kategori;
+                    document.getElementById('editKegiatan').value = history.data.kegiatan;
+                    document.getElementById('editStatus').value = history.data.status;
+                    document.getElementById('editDeskripsi').value = history.data.deskripsi || '';
+                    this.updateMarkdownPreview();
+                    this.showToast('History berhasil dipulihkan!', 'info');
+                }
+            },
+            
+            exportMarkdown() {
+                let md = '# Timeline Pementasan Oktober–November\n\n';
+                md += '## Agenda Terdekat\n\n';
+                
+                this.events.filter(e => e.kategori === 'Agenda Terdekat').forEach(event => {
+                    md += `### ${event.kegiatan}\n`;
+                    md += `**Tanggal:** ${event.tanggal || event.periode}\n`;
+                    md += `**Status:** ${event.status}\n`;
+                    if (event.deskripsi) md += `\n${event.deskripsi}\n`;
+                    md += '\n---\n\n';
+                });
+                
+                md += '## Timeline Lengkap\n\n';
+                this.events.filter(e => e.kategori !== 'Agenda Terdekat').forEach(event => {
+                    md += `### ${event.kegiatan}\n`;
+                    md += `**Periode:** ${event.tanggal || event.periode}\n`;
+                    md += `**Kategori:** ${event.kategori}\n`;
+                    md += `**Status:** ${event.status}\n`;
+                    if (event.deskripsi) md += `\n${event.deskripsi}\n`;
+                    md += '\n---\n\n';
+                });
+                
+                const blob = new Blob([md], { type: 'text/markdown' });
+                saveAs(blob, 'timeline-pementasan.md');
+                this.showToast('Berhasil mengekspor ke Markdown!');
+            },
+            
+            exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFontSize(20);
+                doc.text('Timeline Pementasan Oktober-November', 20, 20);
+                
+                let y = 40;
+                doc.setFontSize(16);
+                doc.text('Agenda Terdekat', 20, y);
+                y += 10;
+                
+                doc.setFontSize(10);
+                this.events.filter(e => e.kategori === 'Agenda Terdekat').forEach(event => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(`${event.tanggal || event.periode}: ${event.kegiatan}`, 20, y);
+                    y += 7;
+                    doc.text(`Status: ${event.status}`, 25, y);
+                    y += 10;
+                });
+                
+                y += 5;
+                doc.setFontSize(16);
+                doc.text('Timeline Lengkap', 20, y);
+                y += 10;
+                
+                doc.setFontSize(10);
+                this.events.filter(e => e.kategori !== 'Agenda Terdekat').forEach(event => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(`${event.tanggal || event.periode}: ${event.kegiatan}`, 20, y);
+                    y += 7;
+                    doc.text(`Kategori: ${event.kategori} | Status: ${event.status}`, 25, y);
+                    y += 10;
+                });
+                
+                doc.save('timeline-pementasan.pdf');
+                this.showToast('Berhasil mengekspor ke PDF!');
+            },
+            
+            exportDOCX() {
+                let content = 'Timeline Pementasan Oktober-November\n\n';
+                content += 'Agenda Terdekat\n\n';
+                
+                this.events.filter(e => e.kategori === 'Agenda Terdekat').forEach(event => {
+                    content += `${event.tanggal || event.periode}: ${event.kegiatan}\n`;
+                    content += `Status: ${event.status}\n\n`;
+                });
+                
+                content += '\nTimeline Lengkap\n\n';
+                this.events.filter(e => e.kategori !== 'Agenda Terdekat').forEach(event => {
+                    content += `${event.tanggal || event.periode}: ${event.kegiatan}\n`;
+                    content += `Kategori: ${event.kategori} | Status: ${event.status}\n\n`;
+                });
+                
+                const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                saveAs(blob, 'timeline-pementasan.docx');
+                this.showToast('Berhasil mengekspor ke DOCX!');
+            },
+            
+            exportExcel() {
+                const ws_data = [
+                    ['Tanggal/Periode', 'Kegiatan', 'Kategori', 'Status', 'Deskripsi']
+                ];
+                
+                this.events.forEach(event => {
+                    ws_data.push([
+                        event.tanggal || event.periode,
+                        event.kegiatan,
+                        event.kategori,
+                        event.status || 'Mendatang',
+                        event.deskripsi || ''
+                    ]);
+                });
+                
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                XLSX.utils.book_append_sheet(wb, ws, 'Timeline');
+                XLSX.writeFile(wb, 'timeline-pementasan.xlsx');
+                this.showToast('Berhasil mengekspor ke Excel!');
+            },
+            
+            exportCalendar() {
+                let ics = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Timeline Seni//ID\n';
+                
+                this.events.filter(e => e.tanggal).forEach(event => {
+                    const date = event.tanggal.replace(/-/g, '');
+                    ics += 'BEGIN:VEVENT\n';
+                    ics += `DTSTART:${date}\n`;
+                    ics += `SUMMARY:${event.kegiatan}\n`;
+                    ics += `DESCRIPTION:${event.kategori} - ${event.status}\n`;
+                    ics += 'END:VEVENT\n';
+                });
+                
+                ics += 'END:VCALENDAR';
+                
+                const blob = new Blob([ics], { type: 'text/calendar' });
+                saveAs(blob, 'timeline-pementasan.ics');
+                this.showToast('Berhasil mengekspor ke Kalender!');
+            },
+            
+            importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                const fileName = file.name.toLowerCase();
+                
+                reader.onload = (e) => {
+                    try {
+                        if (fileName.endsWith('.json')) {
+                            const imported = JSON.parse(e.target.result);
+                            this.events = imported;
+                            this.saveData();
+                            this.renderTimeline();
+                            this.showToast('Berhasil mengimpor dari JSON!');
+                        } else if (fileName.endsWith('.xlsx')) {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(sheet);
+                            
+                            this.events = jsonData.map((row, i) => ({
+                                id: Math.max(...this.events.map(e => e.id), 0) + i + 1,
+                                tanggal: row['Tanggal/Periode'],
+                                periode: row['Tanggal/Periode'],
+                                kegiatan: row['Kegiatan'],
+                                kategori: row['Kategori'],
+                                status: row['Status'] || 'Mendatang',
+                                deskripsi: row['Deskripsi'] || ''
+                            }));
+                            
+                            this.saveData();
+                            this.renderTimeline();
+                            this.showToast('Berhasil mengimpor dari Excel!');
+                        } else {
+                            this.showToast('Format file tidak didukung', 'warning');
+                        }
+                    } catch (error) {
+                        this.showToast('Gagal mengimpor file: ' + error.message, 'error');
+                    }
+                };
+                
+                if (fileName.endsWith('.xlsx')) {
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    reader.readAsText(file);
+                }
+                
+                event.target.value = '';
+            },
+            
+            animateHero() {
+                if (typeof gsap !== 'undefined') {
+                    gsap.from('#home h1', {
+                        y: 50,
+                        opacity: 0,
+                        duration: 1,
+                        ease: 'power3.out'
+                    });
+                    
+                    gsap.from('#home p', {
+                        y: 30,
+                        opacity: 0,
+                        duration: 1,
+                        delay: 0.2,
+                        ease: 'power3.out'
+                    });
+                    
+                    gsap.from('#home .btn-ripple', {
+                        y: 30,
+                        opacity: 0,
+                        duration: 1,
+                        delay: 0.4,
+                        ease: 'power3.out',
+                        stagger: 0.1
+                    });
+                }
+            }
+        };
+        
+        // Initialize app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => App.init());
+        } else {
+            App.init();
+        }
+    </script>
+</body>
+</html>

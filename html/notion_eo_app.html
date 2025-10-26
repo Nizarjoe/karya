@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Clone - Event Organizer Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0E1015;
+            --bg-secondary: #1C1F26;
+            --accent: #7C3AED;
+            --accent-bright: #A855F7;
+            --text-primary: #E2E8F0;
+            --text-secondary: #A1A5B4;
+            --border: rgba(255, 255, 255, 0.08);
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+            background: linear-gradient(135deg, #0E1015 0%, #1C1F26 100%);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        /* Layout Utama */
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(28, 31, 38, 0.8);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+            padding: 15px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #7C3AED, #A855F7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 16px 0 8px 0;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.2);
+        }
+
+        .pages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .page-item {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .page-item:hover {
+            background: rgba(124, 58, 237, 0.1);
+            border-color: var(--accent);
+        }
+
+        .page-item.active {
+            background: rgba(124, 58, 237, 0.2);
+            border-color: var(--accent);
+            color: var(--accent-bright);
+        }
+
+        .page-emoji {
+            font-size: 16px;
+            min-width: 20px;
+        }
+
+        .page-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .page-menu {
+            opacity: 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s ease;
+        }
+
+        .page-item:hover .page-menu {
+            opacity: 1;
+        }
+
+        .add-page-btn {
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(168, 85, 247, 0.1));
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            color: var(--accent-bright);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .add-page-btn:hover {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(168, 85, 247, 0.2));
+            box-shadow: 0 0 16px rgba(124, 58, 237, 0.3);
+        }
+
+        .collapse-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 36px;
+            height: 36px;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .collapse-btn:hover {
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #0E1015 0%, #1C1F26 100%);
+            position: relative;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(28, 31, 38, 0.5);
+            flex-wrap: wrap;
+        }
+
+        .toolbar-btn {
+            padding: 8px 14px;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            color: var(--accent-bright);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(124, 58, 237, 0.2);
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .tab-switch {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .tab-btn {
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(124, 58, 237, 0.2);
+            border-color: var(--accent);
+            color: var(--accent-bright);
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            gap: 16px;
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        /* Editor */
+        .editor-pane {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .editor-pane.active {
+            display: flex;
+        }
+
+        .page-title-input {
+            font-size: 32px;
+            font-weight: 700;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px 0;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .page-title-input:focus {
+            outline: none;
+            border-bottom-color: var(--accent);
+        }
+
+        .blocks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .block {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            min-height: 44px;
+            cursor: grab;
+            position: relative;
+        }
+
+        .block:hover {
+            background: rgba(124, 58, 237, 0.08);
+            border-color: rgba(124, 58, 237, 0.3);
+        }
+
+        .block.active {
+            background: rgba(124, 58, 237, 0.15);
+            border-color: var(--accent);
+        }
+
+        .block-drag-handle {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .block:hover .block-drag-handle {
+            opacity: 1;
+        }
+
+        .block-content {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .block-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            padding: 4px 0;
+            transition: all 0.2s ease;
+        }
+
+        .block-input:focus {
+            outline: none;
+        }
+
+        .block-type-indicator {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            background: rgba(124, 58, 237, 0.1);
+            border-radius: 4px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .block-delete {
+            opacity: 0;
+            cursor: pointer;
+            color: var(--error);
+            transition: opacity 0.2s ease;
+            padding: 4px 8px;
+            font-size: 14px;
+        }
+
+        .block:hover .block-delete {
+            opacity: 1;
+        }
+
+        /* Calendar */
+        .calendar-pane {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .calendar-pane.active {
+            display: flex;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .calendar-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .calendar-nav-btn {
+            padding: 8px 12px;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            color: var(--accent-bright);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-nav-btn:hover {
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        .calendar-view {
+            background: rgba(28, 31, 38, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 8px;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s ease;
+            position: relative;
+            min-height: 80px;
+            overflow: hidden;
+        }
+
+        .day:hover {
+            background: rgba(124, 58, 237, 0.1);
+            border-color: var(--accent);
+        }
+
+        .day.today {
+            background: rgba(124, 58, 237, 0.2);
+            border-color: var(--accent);
+        }
+
+        .day.other-month {
+            opacity: 0.3;
+        }
+
+        .day-number {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .day-events {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .day-event {
+            font-size: 10px;
+            padding: 2px 4px;
+            background: var(--accent);
+            color: white;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .day-event:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 8px rgba(124, 58, 237, 0.4);
+        }
+
+        /* AI Assistant */
+        .ai-chat {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 380px;
+            max-height: 600px;
+            background: linear-gradient(135deg, rgba(28, 31, 38, 0.95), rgba(14, 16, 21, 0.95));
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            box-shadow: 0 0 32px rgba(124, 58, 237, 0.3);
+            animation: slideUp 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .ai-chat.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .ai-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .ai-close {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+            transition: all 0.2s ease;
+        }
+
+        .ai-close:hover {
+            color: var(--accent-bright);
+        }
+
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            display: flex;
+            gap: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .message.user .message-bubble {
+            background: var(--accent);
+            color: white;
+        }
+
+        .message.ai .message-bubble {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+        }
+
+        .ai-input-area {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+        }
+
+        .ai-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .ai-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+        }
+
+        .ai-send {
+            padding: 8px 12px;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .ai-send:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: rgba(28, 31, 38, 0.95);
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 0 48px rgba(124, 58, 237, 0.4);
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--accent-bright);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(124, 58, 237, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!--
+    NOTION CLONE — EVENT ORGANIZER EDITION
+    ======================================
+    🔥 Fitur:
+    - Editor blok mirip Notion
+    - Kalender interaktif editabel
+    - Asisten AI bawaan
+    - Penyimpanan offline otomatis
+    - Animasi futuristik
+
+    Shortcut:
+    Ctrl+S = Simpan
+    Ctrl+K = Cari halaman
+    / = Tambah blok
+    -->
+
+    <div class="container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header" onclick="toggleSidebar()">
+                <div class="logo" id="logo">✨</div>
+            </div>
+
+            <div style="display: none;" class="sidebar-collapsed-content">
+                <input type="text" class="search-box" placeholder="Cari..." id="searchPages">
+                <div class="pages-list" id="pagesList"></div>
+                <button class="add-page-btn" onclick="addNewPage()">+ Halaman</button>
+            </div>
+
+            <div class="sidebar-content">
+                <input type="text" class="search-box" placeholder="Cari halaman..." id="searchPages">
+                <div class="pages-list" id="pagesList"></div>
+                <button class="add-page-btn" onclick="addNewPage()">+ Halaman Baru</button>
+            </div>
+
+            <button class="collapse-btn" onclick="toggleSidebar()">≡</button>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- TOOLBAR -->
+            <div class="toolbar">
+                <button class="toolbar-btn" onclick="addNewBlock()">
+                    <span>+</span> Tambah Blok
+                </button>
+                <button class="toolbar-btn" onclick="addEventModal()">
+                    <span>📅</span> Event
+                </button>
+                <button class="toolbar-btn" onclick="toggleAI()">
+                    <span>🤖</span> AI Asisten
+                </button>
+                <button class="toolbar-btn" onclick="exportData()">
+                    <span>⬇️</span> Export
+                </button>
+                <button class="toolbar-btn" onclick="importDataModal()">
+                    <span>⬆️</span> Import
+                </button>
+
+                <div class="tab-switch">
+                    <button class="tab-btn active" onclick="switchTab('editor')" data-tab="editor">
+                        📝 Editor
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('calendar')" data-tab="calendar">
+                        📅 Kalender
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTENT AREA -->
+            <div class="content-area">
+                <!-- EDITOR PANE -->
+                <div class="editor-pane active">
+                    <input type="text" class="page-title-input" placeholder="Judul Halaman..." id="pageTitle">
+                    <div class="blocks-container" id="blocksContainer"></div>
+                </div>
+
+                <!-- CALENDAR PANE -->
+                <div class="calendar-pane">
+                    <div class="calendar-header">
+                        <h2 class="calendar-title" id="calendarTitle">Oktober 2025</h2>
+                        <div class="calendar-nav">
+                            <button class="calendar-nav-btn" onclick="prevMonth()">← Prev</button>
+                            <button class="calendar-nav-btn" onclick="nextMonth()">Next →</button>
+                        </div>
+                    </div>
+                    <div class="calendar-view">
+                        <div class="weekdays">
+                            <div class="weekday">Min</div>
+                            <div class="weekday">Sen</div>
+                            <div class="weekday">Sel</div>
+                            <div class="weekday">Rab</div>
+                            <div class="weekday">Kam</div>
+                            <div class="weekday">Jum</div>
+                            <div class="weekday">Sab</div>
+                        </div>
+                        <div class="days" id="calendarDays"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- AI CHAT -->
+    <div class="ai-chat" id="aiChat">
+        <div class="ai-header">
+            <div class="ai-title">
+                <span>🤖 AI Asisten</span>
+            </div>
+            <span class="ai-close" onclick="toggleAI()">✕</span>
+        </div>
+        <div class="ai-messages" id="aiMessages"></div>
+        <div class="ai-input-area">
+            <input type="text" class="ai-input" placeholder="Tanya AI..." id="aiInput">
+            <button class="ai-send" onclick="sendAIMessage()">Kirim</button>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="modalOverlay"></div>
+
+    <script>
+        // ===== STATE MANAGEMENT =====
+        const state = {
+            pages: [],
+            activePageId: null,
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear(),
+            sidebarCollapsed: false,
+            selectedBlockId: null
+        };
+
+        const emojis = ['📝', '🎯', '📅', '🎨', '🚀', '💡', '🎭', '📊', '🎪', '🎬', '🎤'];
+
+        // ===== STORAGE =====
+        const saveState = () => {
+            localStorage.setItem('notionEO', JSON.stringify(state));
+        };
+
+        const loadState = () => {
+            const saved = localStorage.getItem('notionEO');
+            if (saved) {
+                const loaded = JSON.parse(saved);
+                state.pages = loaded.pages || [];
+                state.activePageId = loaded.activePageId;
+                state.currentMonth = loaded.currentMonth || new Date().getMonth();
+                state.currentYear = loaded.currentYear || new Date().getFullYear();
+            } else {
+                addPage('Selamat Datang', 'Klik + untuk tambah blok pertama Anda');
+            }
+            renderAll();
+        };
+
+        // ===== PAGE MANAGEMENT =====
+        const addPage = (title = 'Halaman Baru', initialContent = '') => {
+            const page = {
+                id: Date.now().toString(),
+                title,
+                blocks: initialContent ? [
+                    { id: Date.now().toString(), type: 'paragraph', content: initialContent }
+                ] : [],
+                events: []
+            };
+            state.pages.push(page);
+            state.activePageId = page.id;
+            saveState();
+            renderAll();
+        };
+
+        const addNewPage = () => {
+            const name = prompt('Nama Halaman Baru:');
+            if (name) addPage(name);
+        };
+
+        const deletePage = (id) => {
+            if (confirm('Hapus halaman ini?')) {
+                state.pages = state.pages.filter(p => p.id !== id);
+                if (state.activePageId === id) {
+                    state.activePageId = state.pages[0]?.id || null;
+                }
+                saveState();
+                renderAll();
+            }
+        };
+
+        const getActivePage = () => state.pages.find(p => p.id === state.activePageId);
+
+        const renamePage = (id) => {
+            const page = state.pages.find(p => p.id === id);
+            const newName = prompt('Nama baru:', page.title);
+            if (newName && newName.trim()) {
+                page.title = newName.trim();
+                saveState();
+                renderSidebar();
+            }
+        };
+
+        // ===== BLOCK MANAGEMENT =====
+        const addNewBlock = () => {
+            const page = getActivePage();
+            if (!page) return;
+            const block = {
+                id: Date.now().toString(),
+                type: 'paragraph',
+                content: ''
+            };
+            page.blocks.push(block);
+            saveState();
+            renderEditor();
+        };
+
+        const deleteBlock = (blockId) => {
+            const page = getActivePage();
+            if (page) {
+                page.blocks = page.blocks.filter(b => b.id !== blockId);
+                saveState();
+                renderEditor();
+            }
+        };
+
+        const updateBlock = (blockId, type, content) => {
+            const page = getActivePage();
+            if (page) {
+                const block = page.blocks.find(b => b.id === blockId);
+                if (block) {
+                    block.type = type;
+                    block.content = content;
+                    saveState();
+                }
+            }
+        };
+
+        // ===== EVENT MANAGEMENT =====
+        const addEventModal = () => {
+            showModal(`
+                <div class="modal-title">📅 Tambah Event</div>
+                <input type="text" class="modal-input" placeholder="Nama Event" id="eventName">
+                <input type="date" class="modal-input" id="eventDate">
+                <input type="time" class="modal-input" id="eventTime">
+                <select class="modal-input" id="eventColor">
+                    <option value="#7C3AED">Purple</option>
+                    <option value="#3B82F6">Blue</option>
+                    <option value="#10B981">Green</option>
+                    <option value="#F59E0B">Amber</option>
+                    <option value="#EF4444">Red</option>
+                </select>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary" onclick="closeModal()">Batal</button>
+                    <button class="btn btn-primary" onclick="saveEvent()">Simpan</button>
+                </div>
+            `);
+            document.getElementById('eventDate').valueAsDate = new Date();
+        };
+
+        const saveEvent = () => {
+            const page = getActivePage();
+            if (!page) return;
+            
+            const name = document.getElementById('eventName').value;
+            const date = document.getElementById('eventDate').value;
+            const time = document.getElementById('eventTime').value;
+            const color = document.getElementById('eventColor').value;
+
+            if (!name || !date) {
+                alert('Isi nama dan tanggal event');
+                return;
+            }
+
+            const event = {
+                id: Date.now().toString(),
+                date,
+                time: time || '00:00',
+                title: name,
+                color
+            };
+
+            page.events.push(event);
+            saveState();
+            renderCalendar();
+            closeModal();
+        };
+
+        const deleteEvent = (eventId) => {
+            const page = getActivePage();
+            if (page) {
+                page.events = page.events.filter(e => e.id !== eventId);
+                saveState();
+                renderCalendar();
+            }
+        };
+
+        // ===== CALENDAR LOGIC =====
+        const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
+        const getFirstDayOfMonth = (month, year) => new Date(year, month, 1).getDay();
+
+        const renderCalendar = () => {
+            const page = getActivePage();
+            if (!page) return;
+
+            const month = state.currentMonth;
+            const year = state.currentYear;
+            const monthName = new Date(year, month).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+            document.getElementById('calendarTitle').textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+            const daysInMonth = getDaysInMonth(month, year);
+            const firstDay = getFirstDayOfMonth(month, year);
+            const prevDaysInMonth = getDaysInMonth(month - 1, year);
+
+            let html = '';
+
+            // Hari dari bulan sebelumnya
+            for (let i = firstDay - 1; i >= 0; i--) {
+                html += `<div class="day other-month"><div class="day-number">${prevDaysInMonth - i}</div></div>`;
+            }
+
+            // Hari bulan ini
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === today.toISOString().split('T')[0];
+                const dayEvents = page.events.filter(e => e.date === dateStr);
+
+                let eventHtml = dayEvents.map(e => `
+                    <div class="day-event" style="background: ${e.color}" onclick="event.stopPropagation(); deleteEvent('${e.id}')" title="Klik untuk hapus">${e.title}</div>
+                `).join('');
+
+                html += `
+                    <div class="day ${isToday ? 'today' : ''}" onclick="addEventModal()">
+                        <div class="day-number">${day}</div>
+                        <div class="day-events">${eventHtml}</div>
+                    </div>
+                `;
+            }
+
+            // Hari dari bulan berikutnya
+            const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+            for (let day = 1; day <= totalCells - firstDay - daysInMonth; day++) {
+                html += `<div class="day other-month"><div class="day-number">${day}</div></div>`;
+            }
+
+            document.getElementById('calendarDays').innerHTML = html;
+        };
+
+        const prevMonth = () => {
+            if (state.currentMonth === 0) {
+                state.currentMonth = 11;
+                state.currentYear--;
+            } else {
+                state.currentMonth--;
+            }
+            saveState();
+            renderCalendar();
+        };
+
+        const nextMonth = () => {
+            if (state.currentMonth === 11) {
+                state.currentMonth = 0;
+                state.currentYear++;
+            } else {
+                state.currentMonth++;
+            }
+            saveState();
+            renderCalendar();
+        };
+
+        // ===== EDITOR RENDERING =====
+        const renderEditor = () => {
+            const page = getActivePage();
+            if (!page) return;
+
+            document.getElementById('pageTitle').value = page.title;
+
+            let html = '';
+            page.blocks.forEach((block, idx) => {
+                const typeLabel = {
+                    'heading1': 'H1',
+                    'heading2': 'H2',
+                    'paragraph': 'P',
+                    'quote': 'Q',
+                    'todo': '☐',
+                    'list': '•',
+                    'numbered': '#',
+                    'code': '<>',
+                    'image': '🖼',
+                    'divider': '—'
+                }[block.type] || 'TXT';
+
+                html += `
+                    <div class="block" id="block-${block.id}">
+                        <div class="block-drag-handle">⋮</div>
+                        <div class="block-content">
+                            <select class="block-input" style="width: 80px;" onchange="updateBlock('${block.id}', this.value, document.getElementById('input-${block.id}').value); renderEditor();">
+                                <option value="heading1" ${block.type === 'heading1' ? 'selected' : ''}>H1</option>
+                                <option value="heading2" ${block.type === 'heading2' ? 'selected' : ''}>H2</option>
+                                <option value="paragraph" ${block.type === 'paragraph' ? 'selected' : ''}>Paragraph</option>
+                                <option value="quote" ${block.type === 'quote' ? 'selected' : ''}>Quote</option>
+                                <option value="todo" ${block.type === 'todo' ? 'selected' : ''}>To-do</option>
+                                <option value="list" ${block.type === 'list' ? 'selected' : ''}>List</option>
+                                <option value="numbered" ${block.type === 'numbered' ? 'selected' : ''}>Numbered</option>
+                                <option value="code" ${block.type === 'code' ? 'selected' : ''}>Code</option>
+                                <option value="divider" ${block.type === 'divider' ? 'selected' : ''}>Divider</option>
+                            </select>
+                            <input type="text" class="block-input" id="input-${block.id}" value="${block.content}" 
+                                onchange="updateBlock('${block.id}', '${block.type}', this.value)"
+                                onkeydown="handleBlockKeys(event, '${block.id}', ${idx})">
+                        </div>
+                        <span class="block-delete" onclick="deleteBlock('${block.id}')">✕</span>
+                    </div>
+                `;
+            });
+
+            document.getElementById('blocksContainer').innerHTML = html || '<p style="color: var(--text-secondary); text-align: center;">Tidak ada blok. Klik + untuk tambah.</p>';
+        };
+
+        const handleBlockKeys = (e, blockId, idx) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addNewBlock();
+            } else if (e.key === 'Backspace' && !e.target.value) {
+                e.preventDefault();
+                deleteBlock(blockId);
+            }
+        };
+
+        // ===== SIDEBAR RENDERING =====
+        const renderSidebar = () => {
+            let html = '';
+            const searchTerm = document.getElementById('searchPages')?.value.toLowerCase() || '';
+
+            const filtered = state.pages.filter(p => p.title.toLowerCase().includes(searchTerm));
+
+            filtered.forEach(page => {
+                const emoji = emojis[Math.abs(parseInt(page.id)) % emojis.length];
+                html += `
+                    <div class="page-item ${page.id === state.activePageId ? 'active' : ''}" onclick="selectPage('${page.id}')">
+                        <span class="page-emoji">${emoji}</span>
+                        <span class="page-name">${page.title}</span>
+                        <div class="page-menu" onclick="event.stopPropagation(); showPageMenu('${page.id}')">⋯</div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('pagesList').innerHTML = html;
+        };
+
+        const showPageMenu = (pageId) => {
+            const action = confirm('Rename? OK=Rename, Cancel=Delete');
+            if (action) {
+                renamePage(pageId);
+            } else {
+                deletePage(pageId);
+            }
+        };
+
+        const selectPage = (id) => {
+            state.activePageId = id;
+            saveState();
+            renderAll();
+        };
+
+        const toggleSidebar = () => {
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        };
+
+        // ===== TAB SWITCHING =====
+        const switchTab = (tab) => {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.editor-pane, .calendar-pane').forEach(pane => pane.classList.remove('active'));
+
+            event.target.classList.add('active');
+            if (tab === 'editor') {
+                document.querySelector('.editor-pane').classList.add('active');
+            } else {
+                document.querySelector('.calendar-pane').classList.add('active');
+                renderCalendar();
+            }
+        };
+
+        // ===== AI ASSISTANT =====
+        const aiResponses = {
+            'buat rundown': 'Berikut template rundown acara:\n1. Pre-event (30 min sebelum)\n2. Opening (5 min)\n3. Acara utama (sesuai durasi)\n4. Penutup (5 min)\n5. Post-event breakdown',
+            'tulis deskripsi': 'Deskripsi event yang menarik harus: Jelaskan tema, highlight utama, informasi praktis, dan call-to-action. Contoh: "Acara musik live dengan 5 artis terkemuka, dimulai pukul 19.00 di Lapangan Terbuka..."',
+            'rangkuman': 'Fitur rangkuman otomatis: Kami menganalisis catatan Anda dan membuat ringkasan singkat dengan poin-poin kunci.',
+            'jadwal acara': 'Timeline yang efektif:\n- H-7: Promosi\n- H-3: Pengecekan teknis\n- H-1: Brief crew\n- H: Eksekusi\n- H+1: Evaluasi',
+            'checklist': 'Checklist event organizer:\n☐ Venue confirmed\n☐ Equipment ready\n☐ Crew briefing\n☐ Contingency plan\n☐ Documentation setup',
+            'marketing': 'Strategi promosi: Social media posting, email list, partnership dengan influencer, dan paid ads untuk jangkauan maksimal.',
+            'default': 'Saya AI asisten untuk event organizer. Tanya tentang: rundown, deskripsi, jadwal, checklist, marketing, atau butuh bantuan rencana lainnya!'
+        };
+
+        const sendAIMessage = () => {
+            const input = document.getElementById('aiInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            addAIMessage('user', message);
+            input.value = '';
+
+            setTimeout(() => {
+                const response = Object.keys(aiResponses).find(key => 
+                    message.toLowerCase().includes(key)
+                ) || 'default';
+                
+                addAIMessage('ai', aiResponses[response]);
+            }, 600);
+        };
+
+        const addAIMessage = (type, text) => {
+            const messagesDiv = document.getElementById('aiMessages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            
+            if (type === 'ai') {
+                let displayText = '';
+                let charIndex = 0;
+                
+                const typeEffect = () => {
+                    if (charIndex < text.length) {
+                        displayText += text[charIndex];
+                        bubble.textContent = displayText;
+                        charIndex++;
+                        setTimeout(typeEffect, 20);
+                    }
+                };
+                
+                typeEffect();
+            } else {
+                bubble.textContent = text;
+            }
+            
+            messageEl.appendChild(bubble);
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+
+        const toggleAI = () => {
+            document.getElementById('aiChat').classList.toggle('active');
+            if (document.getElementById('aiChat').classList.contains('active')) {
+                document.getElementById('aiInput').focus();
+            }
+        };
+
+        // ===== MODAL MANAGEMENT =====
+        const showModal = (content) => {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.innerHTML = `<div class="modal">${content}</div>`;
+            overlay.classList.add('active');
+        };
+
+        const closeModal = () => {
+            document.getElementById('modalOverlay').classList.remove('active');
+        };
+
+        const importDataModal = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = JSON.parse(evt.target.result);
+                        state.pages = data.pages;
+                        state.activePageId = data.activePageId;
+                        saveState();
+                        renderAll();
+                        alert('✅ Data berhasil diimport!');
+                    } catch {
+                        alert('❌ File tidak valid');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+
+        // ===== EXPORT & IMPORT =====
+        const exportData = () => {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `notion-eo-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // ===== PAGE TITLE UPDATE =====
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('pageTitle').addEventListener('change', (e) => {
+                const page = getActivePage();
+                if (page) {
+                    page.title = e.target.value;
+                    saveState();
+                    renderSidebar();
+                }
+            });
+
+            document.getElementById('searchPages').addEventListener('input', renderSidebar);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    alert('✅ Tersimpan otomatis!');
+                }
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    document.getElementById('searchPages').focus();
+                }
+            });
+
+            // AI input enter key
+            document.getElementById('aiInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendAIMessage();
+            });
+
+            loadState();
+        });
+
+        // ===== RENDER ALL =====
+        const renderAll = () => {
+            renderSidebar();
+            renderEditor();
+            renderCalendar();
+        };
+    </script>
+</body>
+</html>
